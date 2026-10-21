@@ -5,32 +5,51 @@
 | paha77/php-82-cli | PHP CLI with GD, EXIF, mbstring, ZIP, GMP, BCMath and Europe/Vienna timezone | Official PHP CLI, Debian Bookworm |
 | paha77/s2i-ubi9-php82 | Apache/FPM, S2I CLI runner, status endpoints, prelogin | Red Hat UBI 9 PHP 8.2 |
 | paha77/php-82-dev | Xdebug, Composer, wait scripts and local UID aliases | Freshly built custom UBI |
+| paha77/php-84-cli | Same CLI extensions, timezone and user as 8.2 CLI | Official PHP 8.4 CLI, Debian Bookworm |
+| paha77/s2i-ubi10-php84 | Apache/FPM, S2I CLI runner, status endpoints, prelogin | Red Hat UBI 10 PHP 8.4 |
+| paha77/php-84-dev | Xdebug, Composer, wait scripts and local UID aliases | Freshly built custom UBI 10 PHP 8.4 |
 
 All releases target `linux/amd64` and `linux/arm64/v8` (including M1 Macs).
-This repository builds, validates and publishes these three PHP images independently.
+This repository builds, validates and publishes both branches; the existing 8.2
+repositories and aliases remain in place.
 
 ## Security and updates
 
-`versions.env` owns the PHP minimum/exact official base patch, UBI version tag,
-and Composer version. The [PHP advisory](https://www.php.net/archive/2026.php#2026-10-21-5)
-requires PHP 8.2.35. PHP 8.2 security support ends 31 December 2026.
+`versions.env` owns the branch list, PHP minimum/exact official base patches, UBI
+bases/generations, Xdebug package names and Composer version. It is a Bash config
+with associative arrays (Bash 4+); use the Docker tools wrapper on macOS.
+The [PHP advisory](https://www.php.net/archive/2026.php#2026-10-21-5)
+requires PHP 8.2.35 and 8.4.27 for CVE-2026-109618 and CVE-2026-109619.
+The runtime gate independently enforces those floors and the expected branch,
+even if a configured minimum is lowered. PHP 8.2 security support ends
+31 December 2026. PHP 8.4 active support ends 31 December 2026 and security support
+ends 31 December 2028; see the [upstream schedule](https://www.php.net/supported-versions.php).
 The [UBI catalog](https://catalog.redhat.com/en/software/containers/ubi9/php-82/657b0176999f2e3662c8159b)
-lists version `1-1792440794`; its architecture availability and fixed PHP package
-availability have **not** been confirmed locally. The Red Hat pages for
+lists version `1-1792440794`; an amd64 build with package updates still reported
+PHP 8.2.33 and failed the security gate. The Red Hat pages for
 [CVE-2026-109618](https://access.redhat.com/security/cve/CVE-2026-109618) and
 [CVE-2026-109619](https://access.redhat.com/security/cve/CVE-2026-109619)
 were inaccessible during implementation. No vendor backport exception is used.
 UBI updates packages during build, then must pass the same upstream version floor.
+The new UBI 10 base is pinned by multi-platform digest. Its manifest includes
+amd64 and arm64/v8; an ARM64 base inspection executed PHP 8.4.24, which is below
+the floor. The public UBI repository query did not offer a PHP 8.4 update or
+matching Xdebug package. Builds with package updates still executed PHP 8.4.24
+on both architectures. These remain release blockers until Red Hat supplies the
+fixed packages for both architectures; base availability alone is insufficient.
+Review the configured 8.4 Xdebug package name when the vendor supplies it;
+`php8.4-pecl-xdebug` is currently unavailable. The available PHP 8.3 Xdebug package
+is not a substitute.
 If either architecture lacks a fixed base/package, the workflow fails before login
 or publication. Review vendor advisories, update versions.env as needed, and retry
 with workflow_dispatch. Never lower the floor merely to get a green build.
 
 Review security releases immediately; weekly refreshes fetch updated OS packages
 with no build cache. Version tags should be advanced deliberately after reviewing
-vendor changes. Add separately named PHP 8.5 CLI/UBI/dev images (at least the
-advisory's 8.5.12) once UBI provides that branch. Validate extensions, FPM, Composer
-and CLI runner behavior on both platforms before retiring the 8.2 images; complete
-this migration before 8.2 EOL.
+vendor changes. Migrate consumers to the separately named 8.4 images only after
+extensions, FPM, Composer and CLI runner behavior pass on both platforms. Retain
+8.2 images during migration and complete migration before 8.2 EOL. PHP 8.5 images
+are deferred: neither UBI 9 nor UBI 10 currently has a `php-85` repository.
 
 ## Build and validation
 
@@ -45,8 +64,9 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/work" -w 
 ```
 
 The default Buildx **docker driver** loads each architecture under its own local
-tag. The dev build consumes that exact local UBI tag, never Docker Hub latest.
-All three images on both architectures execute PHP, check the release floor and
+tag: `local/php-{cli,ubi,dev}:{82,84}-{amd64,arm64}`. The dev build consumes
+that exact branch and architecture's local UBI tag, never Docker Hub latest.
+All six images on both architectures execute PHP, check the release floor and
 extensions, verify non-root defaults, and check common credential locations.
 UBI/dev also validate FPM configuration and unlimited-memory CLI runner behavior;
 dev checks Composer, Xdebug and wait scripts. Build contexts are allowlisted.
@@ -87,16 +107,18 @@ checked against upstream GitHub release pages; review source before updating pin
 
 Each repository gets these tags:
 
-* `php8.2.35-<full-source-sha>-run<run-id>.<attempt>`: unique release manifest.
+* `php<VERSION>-<full-source-sha>-run<run-id>.<attempt>`: unique release manifest,
+  where VERSION is `8.2.35` or `8.4.27` for the corresponding repository.
 * The same release tag plus `-amd64` or `-arm64`: platform staging images.
-* `php8.2.35` and `latest`: mutable, validated multi-platform compatibility aliases.
+* `php<VERSION>` and `latest`: mutable, validated multi-platform compatibility aliases
+  within each branch's separate repositories.
 
 Configure Docker Hub immutable-tag rules for the `*-run*` release/staging tags where
 supported; never reuse them. The run identity distinguishes scheduled package
 refreshes without source changes. UBI can report a later 8.2 patch than the tag's
-minimum; runtime checks and rpm output record what was built. All immutable
-manifests pass before aliases are promoted. Registries offer no transaction across
-repositories: a network failure during promotion can update only some aliases;
+minimum (likewise for 8.4); runtime checks and rpm output record what was built.
+All six immutable manifests pass before aliases are promoted. Registries offer no
+transaction across repositories: a network failure during promotion can update only some aliases;
 the job fails and a new dispatch safely republishes a complete release.
 
 Inspect a release (replace TAG with the actual workflow tag):
@@ -106,6 +128,11 @@ docker buildx imagetools inspect paha77/php-82-dev:TAG
 docker run --rm --platform linux/amd64 --entrypoint php paha77/php-82-dev:TAG -v
 docker run --rm --platform linux/arm64/v8 --entrypoint php paha77/php-82-dev:TAG -v
 docker run --rm --platform linux/arm64/v8 --entrypoint php-fpm paha77/php-82-dev:TAG -t
+# Use an 8.4 release tag for the new repositories:
+docker buildx imagetools inspect paha77/s2i-ubi10-php84:TAG
+docker run --rm --platform linux/amd64 --entrypoint php paha77/php-84-cli:TAG -v
+docker run --rm --platform linux/arm64/v8 --entrypoint php paha77/php-84-dev:TAG -v
+docker run --rm --platform linux/arm64/v8 --entrypoint php-fpm paha77/php-84-dev:TAG -t
 ```
 
 Expected manifest excerpt, **illustrative, not an observed build result**:
@@ -115,7 +142,7 @@ Platform: linux/amd64
 Platform: linux/arm64/v8
 ```
 
-Consume any of the three images by its published name and tag. Pin a validated
+Consume any of the six images by its published name and tag. Pin a validated
 immutable release tag or manifest digest for reproducibility; `latest` tracks the
 most recently validated release.
 
@@ -127,23 +154,25 @@ Publication defaults to `paha77`. To publish a fork's images to your own Docker 
 account or organization, open **Settings → Secrets and variables → Actions →
 Variables → New repository variable** and set `DOCKERHUB_NAMESPACE` to your namespace
 (for example, `yourname`). This publishes `yourname/php-82-cli`,
-`yourname/s2i-ubi9-php82` and `yourname/php-82-dev`, including all release and alias
-tags. Create those three Docker Hub repositories and use credentials with push
+`yourname/s2i-ubi9-php82`, `yourname/php-82-dev`, `yourname/php-84-cli`,
+`yourname/s2i-ubi10-php84` and `yourname/php-84-dev`, including all release and alias
+tags. Create those six Docker Hub repositories and use credentials with push
 access to them. In the setup instructions below, replace `paha77` with your chosen
 namespace and use your fork's GitHub repository address for GitHub CLI commands.
 
 The namespace is separate from `DOCKERHUB_USERNAME`, which identifies the login
 account and may differ when publishing to an organization. It is not a secret.
 The publication script also accepts `DOCKERHUB_NAMESPACE` as an environment
-variable, defaulting to `paha77` when unset or empty. Local build tags and the dev
-image's freshly built UBI parent are unchanged.
+variable, defaulting to `paha77` when unset or empty. Namespace selection does not
+affect local build tags or the dev image's freshly built UBI parent.
 
 ### Obtain Docker Hub credentials
 
 1. Sign in to [Docker Home](https://app.docker.com/) with the Docker ID that owns
    `paha77`, or an account with push access to that namespace. Verify the account's
    email address. Create `paha77/php-82-cli`, `paha77/s2i-ubi9-php82` and
-   `paha77/php-82-dev` on Docker Hub before enabling publication.
+   `paha77/php-82-dev`, `paha77/php-84-cli`, `paha77/s2i-ubi10-php84` and
+   `paha77/php-84-dev` on Docker Hub before enabling publication.
 2. Open your avatar → **Account settings** → **Personal access tokens** →
    **Generate new token**. Give it a dedicated description such as
    `php-docker-images GitHub Actions` and choose an expiration date.
@@ -157,7 +186,7 @@ image's freshly built UBI parent are unchanged.
 If `paha77` is an organization with a Docker Team or Business subscription, prefer
 an [organization access token](https://docs.docker.com/security/access-tokens/organization-access-tokens/):
 select the organization in Docker Home → **Identity & auth** → **Access tokens**
-and generate a token with read/write access limited to the three repositories,
+and generate a token with read/write access limited to the six repositories,
 without delete or organization administration permissions. For this token type,
 use the organization name as the login username.
 
@@ -200,8 +229,14 @@ any tag. No application deployment is performed.
 
 ## Implementation validation status
 
-Shell syntax and Git whitespace checks passed. The containerized tooling image
-built successfully after Docker socket access was granted. PHP image builds and
-runtime validation were deferred at the maintainer's request. PHP image builds,
-actual ARM64 execution, base-image availability and published manifests remain
-unverified. No PHP images have been published.
+Shell syntax and Git whitespace checks passed. Docker-only checks executed the
+8.4.27 CLI image on amd64 and arm64/v8 successfully. The 8.2.35 CLI image also
+passed on amd64.
+UBI 10 builds completed on amd64 and arm64/v8; FPM configuration, expected
+extensions and the unlimited-memory CLI runner passed isolated compatibility
+checks on both platforms. Both UBI 10 builds failed the PHP floor with 8.4.24.
+Negative gate tests also rejected a lowered minimum and a mismatched branch.
+The full build stopped on UBI 9 amd64 reporting PHP 8.2.33. An ARM64 8.4 dev build
+failed because the configured matching Xdebug package is unavailable. Dev runtime
+validation and a complete successful build remain blocked. No images were pushed
+or published during these checks; published manifests remain unverified.

@@ -2,7 +2,7 @@
 
 ## Scope
 
-This is a standalone repository for building, validating and publishing three
+This is a standalone repository for building, validating and publishing six
 reusable PHP images to Docker Hub. These instructions are sufficient to resume
 work without conversation history. Do not inspect or modify external repositories
 or consumers. Do not start application containers or deploy images.
@@ -12,9 +12,12 @@ or consumers. Do not start application containers or deploy images.
 | `paha77/php-82-cli` | `images/cli` | Official PHP CLI with GD, EXIF, mbstring, ZIP, GMP, BCMath; Europe/Vienna timezone; UID 1000:0 |
 | `paha77/s2i-ubi9-php82` | `images/ubi` | UBI 9 Apache/FPM, S2I CLI runner, status/prelogin hooks; UID 1001 |
 | `paha77/php-82-dev` | `images/dev` | Custom UBI plus Xdebug, Composer, wait scripts and UID aliases; UID 1001 |
+| `paha77/php-84-cli` | `images/cli` | Same CLI behavior on PHP 8.4; UID 1000:0 |
+| `paha77/s2i-ubi10-php84` | `images/ubi` | Same Apache/FPM and S2I behavior on UBI 10 PHP 8.4; UID 1001 |
+| `paha77/php-84-dev` | `images/dev` | Fresh custom UBI 10 PHP 8.4 plus dev tools; UID 1001 |
 
 CLI builds independently. Dev must consume the custom UBI image built for the
-same architecture in the same run, never an old published `latest`.
+same branch and architecture in the same run, never an old published `latest`.
 Keep these registry names unless a concrete ownership/access issue requires a
 migration; explain any proposed registry migration before implementing it.
 
@@ -35,11 +38,12 @@ execute authorized work and necessary checks without repeated confirmation.
 
 ## Build and release architecture
 
-- `versions.env` centralizes PHP_VERSION, UBI_BASE and COMPOSER_BASE. Avoid
+- `versions.env` centralizes PHP_BRANCHES, PHP_VERSIONS, UBI_BASES, UBI_GENERATIONS,
+  XDEBUG_PACKAGES and COMPOSER_BASE using Bash 4+ arrays. Avoid
   duplicating version configuration. Keep base images version-pinned or digest-pinned
   where practical, with deliberate security updates.
 - `scripts/build.sh` uses the default Buildx **docker driver**, loading separate
-  `local/php-{cli,ubi,dev}:{amd64,arm64}` tags. Do not switch builders without
+  `local/php-{cli,ubi,dev}:{82,84}-{amd64,arm64}` tags. Do not switch builders without
   preserving dev's ability to resolve the freshly built local UBI parent.
 - Every image targets `linux/amd64` and `linux/arm64/v8`. ARM64 must actually
   execute, including on an emulated CI runner; an amd64-only build is insufficient.
@@ -64,16 +68,18 @@ execute authorized work and necessary checks without repeated confirmation.
 
 ## Security requirements
 
-The 21 October 2026 PHP advisory identifies 8.2.35 as the fixed 8.2 release for
-CVE-2026-109618 and CVE-2026-109619. Enforce PHP 8.2.35 or later for all images
-and architectures. Verify current PHP and Red Hat vendor information when changing
+The 21 October 2026 PHP advisory identifies 8.2.35 and 8.4.27 as the fixed releases for
+CVE-2026-109618 and CVE-2026-109619. Enforce the corresponding branch and floor
+for all images and architectures, independently of the configured build minimum.
+Verify current PHP and Red Hat vendor information when changing
 versions. Never lower the floor without independently verified vendor-backport
 documentation and a check of the exact fixed package release.
 
 PHP 8.2 reaches upstream security end of life on 31 December 2026. Maintain the
-README upgrade path to a supported branch (currently planned as separately named
-8.5 images when UBI supports that branch). Branch migration also requires updating
-the explicit 8.2 assertion in scripts/check-image.sh, not just versions.env.
+README upgrade path to the separately named 8.4 images (security support through
+31 December 2028). PHP 8.5 is deferred until UBI provides it. Adding branches also
+requires updating the supported branch/floor map in scripts/check-image.sh,
+not just versions.env.
 
 UBI package updates must pass the PHP floor. If a fixed release or base is missing
 for either architecture, fail before publishing; document the blocker and safe
@@ -115,13 +121,20 @@ never report actual image execution or publication without evidence.
 
 ## Known status and limitations
 
-At initial implementation, shell syntax checks passed but Docker socket access
-was denied. No image build, actual ARM64 execution or published manifest has been
-verified in this session history. Check current evidence before claiming success.
-The configured UBI tag's architecture availability and fixed PHP packages remain
-unverified. Red Hat CVE pages were inaccessible; no backport exception was accepted.
-The inherited UBI metrics script assumes cgroup v1. Keep limitations visible until
-resolved with evidence; these statements are a starting point, not permanent facts.
+Shell syntax and whitespace checks passed. Docker tools and image builds were
+executed. PHP 8.2.35 CLI passed on amd64; PHP 8.4.27 CLI passed on amd64 and ARM64.
+The full build failed on the updated UBI 9 amd64 image reporting PHP 8.2.33.
+The pinned UBI 10 PHP 8.4 manifest includes amd64 and arm64/v8. Both custom UBI 10
+builds executed PHP 8.4.24 and failed the floor after package updates; separate
+FPM, extension and unlimited-memory CLI runner checks passed on both platforms.
+The ARM64 8.4 dev build failed on the unavailable matching Xdebug package. Review
+the configured package name when Red Hat supplies it. Do not lower the floor or
+install an Xdebug package for PHP 8.3 to work around these release blockers.
+Negative security-gate tests rejected a lowered minimum and mismatched branch.
+Red Hat CVE pages were inaccessible; no backport exception was accepted. Dev
+runtime validation, a complete successful build and published manifests remain
+unverified. No images were published in these checks. The inherited UBI metrics
+script assumes cgroup v1. Update these limitations only with new evidence.
 
 ## Git and delivery
 
