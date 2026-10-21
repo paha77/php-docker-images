@@ -182,14 +182,12 @@ token after a successful publication with the replacement.
 
 The Git repository is initialized and its SSH remote is
 `git@github.com:paha77/php-docker-images.git`. Inspect current Git status and history
-before publishing. Configure secrets, then review and commit the build files
-to enable the workflow. GitHub CLI is optional setup tooling, not a build dependency:
+before publishing. Review the committed build files and configure secrets before
+pushing to enable the workflow. GitHub CLI is optional setup tooling, not a build dependency:
 
 ```sh
 gh secret set DOCKERHUB_USERNAME --repo paha77/php-docker-images
 gh secret set DOCKERHUB_TOKEN --repo paha77/php-docker-images
-git add .
-git commit -m "Add multi-architecture PHP image builds"
 git push -u origin main
 gh workflow enable images.yml --repo paha77/php-docker-images
 gh workflow run images.yml --repo paha77/php-docker-images --ref main
@@ -202,6 +200,8 @@ any tag. No application deployment is performed.
 
 ## Implementation validation status
 
-Shell syntax checks passed. Docker execution was blocked by local socket access;
-builds, actual ARM64 execution, base-image availability and pushed manifest checks
-remain unverified until the first successful CI run. No images have been published.
+Shell syntax and Git whitespace checks passed. The containerized tooling image
+built successfully after Docker socket access was granted. PHP image builds and
+runtime validation were deferred at the maintainer's request. PHP image builds,
+actual ARM64 execution, base-image availability and published manifests remain
+unverified. No PHP images have been published.
