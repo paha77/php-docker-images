@@ -103,6 +103,48 @@ most recently validated release.
 
 ## GitHub setup
 
+### Obtain Docker Hub credentials
+
+1. Sign in to [Docker Home](https://app.docker.com/) with the Docker ID that owns
+   `paha77`, or an account with push access to that namespace. Verify the account's
+   email address. Create `paha77/php-82-cli`, `paha77/s2i-ubi9-php82` and
+   `paha77/php-82-dev` on Docker Hub before enabling publication.
+2. Open your avatar → **Account settings** → **Personal access tokens** →
+   **Generate new token**. Give it a dedicated description such as
+   `php-docker-images GitHub Actions` and choose an expiration date.
+3. Grant repository **Read & Write** access without Delete permission; leave
+   unrelated product access disabled. A personal access token applies to all
+   repositories the account can access, so use an account with limited access
+   where practical. See Docker's [personal access token instructions](https://docs.docker.com/security/access-tokens/personal-access-tokens/).
+4. Generate the token and copy it into a password manager immediately: Docker
+   displays it only once. Use this token instead of your Docker account password.
+
+If `paha77` is an organization with a Docker Team or Business subscription, prefer
+an [organization access token](https://docs.docker.com/security/access-tokens/organization-access-tokens/):
+select the organization in Docker Home → **Identity & auth** → **Access tokens**
+and generate a token with read/write access limited to the three repositories,
+without delete or organization administration permissions. For this token type,
+use the organization name as the login username.
+
+### Set GitHub Actions secrets
+
+In the GitHub repository, open **Settings → Secrets and variables → Actions →
+New repository secret** and create these two secrets (not Actions variables):
+
+| Secret name | Value |
+| --- | --- |
+| `DOCKERHUB_USERNAME` | Docker ID that issued the personal token (for example, `paha77`), not an email address; for an organization token, the organization name |
+| `DOCKERHUB_TOKEN` | The generated access token |
+
+Alternatively, use the two `gh secret set` commands below and enter each value at
+its prompt. Never put the token in a command argument, committed file, build
+argument or workflow log. Local `docker login` is not required for CI: the workflow
+reads these secrets only in the publication step after validation. Before the
+token expires, create a replacement, update `DOCKERHUB_TOKEN`, and revoke the old
+token after a successful publication with the replacement.
+
+### Enable the workflow
+
 The Git repository is initialized and its SSH remote is
 `git@github.com:paha77/php-docker-images.git`. Only the initial README has been
 committed and pushed. Configure secrets, then review and commit the build files
@@ -118,11 +160,7 @@ gh workflow enable images.yml --repo paha77/php-docker-images
 gh workflow run images.yml --repo paha77/php-docker-images --ref main
 ```
 
-Create the three Docker Hub repositories under paha77 first, and confirm ownership.
-Use a dedicated token with read/write access to only these repositories where
-Docker Hub supports repository-scoped tokens; no delete scope. Enter secrets only
-at the CLI prompts or GitHub Settings → Secrets and variables → Actions. Enable
-Actions in repository settings, protect the default branch, require the image
+Enable Actions in repository settings, protect the default branch, require the image
 build check and review workflow changes. The first default-branch push publishes
 automatically if secrets are already configured. Watch its result before consuming
 any tag. No application deployment is performed.

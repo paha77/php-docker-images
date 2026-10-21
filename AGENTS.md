@@ -127,10 +127,18 @@ Git is initialized. The initial README-only commit was pushed; implementation
 files were left uncommitted, and README was subsequently revised. Always inspect
 live Git status instead of assuming this snapshot is still current.
 
-Do not commit, push, merge, rebase, modify remotes or create remote repositories
-unless explicitly requested. Remotes must use SSH, never HTTPS workarounds.
-The earlier README-only commit/push authorization was completed and is not ongoing
-authorization. Do not publish images manually without explicit authorization.
+Always create a local Git commit after creating or closing a bigger milestone
+(a substantial, coherent unit of work). This rule authorizes milestone commits
+without asking again. Run the relevant checks, review the diff, and stage only
+changes belonging to that milestone; preserve unrelated uncommitted user changes.
+After each milestone commit, report the commit and ask the user whether to push it.
+Do not push until the user explicitly approves.
+
+Outside milestone commits, do not commit unless explicitly requested. Do not
+merge, rebase, modify remotes or create remote repositories unless explicitly
+requested. Remotes must use SSH, never HTTPS workarounds. The earlier README-only
+commit/push authorization was completed and is not ongoing push authorization.
+Do not publish images manually without explicit authorization.
 Remember that pushing the workflow to the default branch enables automatic
 publication if secrets are configured.
 
