@@ -2,7 +2,10 @@
 
 ## Scope
 
-This standalone repository builds reusable PHP images. Do not inspect or modify external repositories or consumers. Do not start application containers or deploy images.
+This is a standalone repository for building, validating and publishing three
+reusable PHP images to Docker Hub. These instructions are sufficient to resume
+work without conversation history. Do not inspect or modify external repositories
+or consumers. Do not start application containers or deploy images.
 
 | Image | Build context | Responsibility |
 | --- | --- | --- |
@@ -122,10 +125,15 @@ resolved with evidence; these statements are a starting point, not permanent fac
 
 ## Git and delivery
 
+Keep repository content suitable for public disclosure. Do not include private
+project names, paths, domains, infrastructure details, credentials, or personal
+contact information other than the approved Git author name/email. Audit history
+and GitHub metadata before making the repository public; a later deletion does not
+remove information from earlier commits.
+
 SSH remote: `git@github.com:paha77/php-docker-images.git`; default branch: `main`.
-Git is initialized. The initial README-only commit was pushed; implementation
-files were left uncommitted, and README was subsequently revised. Always inspect
-live Git status instead of assuming this snapshot is still current.
+Git is initialized. Always inspect live Git status and remote history before
+making changes; do not assume local and remote history match.
 
 Always create a local Git commit after creating or closing a bigger milestone
 (a substantial, coherent unit of work). This rule authorizes milestone commits

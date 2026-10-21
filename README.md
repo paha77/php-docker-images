@@ -56,7 +56,25 @@ CLI retains extension headers and docker-php-ext helpers for compiling additiona
 modules. Its runtime default is UID 1000:0; UBI/dev use UID 1001. Derived Dockerfiles
 installing packages must explicitly use `USER root`, then restore a non-root user.
 Build-time SSH-key injection is excluded. Status/prelogin hooks are included in
-the UBI image; the metrics script currently assumes cgroup v1.
+the UBI image; the metrics script currently assumes cgroup v1. When both
+`PRELOGIN_USER` and `PRELOGIN_PASSWORD` are set, the prelogin hook requires the
+`x-prelogin-auth` header containing the Basic authentication value, except for
+OPTIONS requests. Supply credentials only at runtime.
+
+## Public repository policy
+
+Keep source, documentation, examples, and Git history free of private project
+names, paths, domains, infrastructure details, credential values, and personal
+contact information other than the approved Git author name/email. The image
+names and repository address documented here are the public identifiers of this
+project. Documented environment variable and
+Actions secret names are configuration interfaces; their values must stay private.
+
+Before changing visibility, audit all branches and tags, commit author/committer
+metadata, pull requests, issues, releases, wiki pages, and Actions logs/artifacts.
+Deleting a reference in a later commit does not remove it from history. Any
+history replacement requires explicit authorization and a separate review before
+publication. Never make the repository public while historical disclosures remain.
 
 ## Releases and automation
 
@@ -146,8 +164,8 @@ token after a successful publication with the replacement.
 ### Enable the workflow
 
 The Git repository is initialized and its SSH remote is
-`git@github.com:paha77/php-docker-images.git`. Only the initial README has been
-committed and pushed. Configure secrets, then review and commit the build files
+`git@github.com:paha77/php-docker-images.git`. Inspect current Git status and history
+before publishing. Configure secrets, then review and commit the build files
 to enable the workflow. GitHub CLI is optional setup tooling, not a build dependency:
 
 ```sh
