@@ -121,6 +121,23 @@ most recently validated release.
 
 ## GitHub setup
 
+### Choose the Docker Hub namespace
+
+Publication defaults to `paha77`. To publish a fork's images to your own Docker Hub
+account or organization, open **Settings → Secrets and variables → Actions →
+Variables → New repository variable** and set `DOCKERHUB_NAMESPACE` to your namespace
+(for example, `yourname`). This publishes `yourname/php-82-cli`,
+`yourname/s2i-ubi9-php82` and `yourname/php-82-dev`, including all release and alias
+tags. Create those three Docker Hub repositories and use credentials with push
+access to them. In the setup instructions below, replace `paha77` with your chosen
+namespace and use your fork's GitHub repository address for GitHub CLI commands.
+
+The namespace is separate from `DOCKERHUB_USERNAME`, which identifies the login
+account and may differ when publishing to an organization. It is not a secret.
+The publication script also accepts `DOCKERHUB_NAMESPACE` as an environment
+variable, defaulting to `paha77` when unset or empty. Local build tags and the dev
+image's freshly built UBI parent are unchanged.
+
 ### Obtain Docker Hub credentials
 
 1. Sign in to [Docker Home](https://app.docker.com/) with the Docker ID that owns
