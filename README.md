@@ -2,11 +2,12 @@
 
 | Docker Hub image | Purpose | Parent |
 | --- | --- | --- |
-| paha77/php-82-cli | PHP CLI extensions and Vienna timezone | Official PHP CLI, Debian Bookworm |
+| paha77/php-82-cli | PHP CLI with GD, EXIF, mbstring, ZIP, GMP, BCMath and Europe/Vienna timezone | Official PHP CLI, Debian Bookworm |
 | paha77/s2i-ubi9-php82 | Apache/FPM, S2I CLI runner, status endpoints, prelogin | Red Hat UBI 9 PHP 8.2 |
 | paha77/php-82-dev | Xdebug, Composer, wait scripts and local UID aliases | Freshly built custom UBI |
 
-These reusable images are independent of application code.
+All releases target `linux/amd64` and `linux/arm64/v8` (including M1 Macs).
+This repository builds, validates and publishes these three PHP images independently.
 
 ## Security and updates
 
@@ -24,7 +25,12 @@ If either architecture lacks a fixed base/package, the workflow fails before log
 or publication. Review vendor advisories, update versions.env as needed, and retry
 with workflow_dispatch. Never lower the floor merely to get a green build.
 
-Review security releases immediately. Maintain a tested upgrade path to a supported PHP branch before PHP 8.2 reaches end of security support.
+Review security releases immediately; weekly refreshes fetch updated OS packages
+with no build cache. Version tags should be advanced deliberately after reviewing
+vendor changes. Add separately named PHP 8.5 CLI/UBI/dev images (at least the
+advisory's 8.5.12) once UBI provides that branch. Validate extensions, FPM, Composer
+and CLI runner behavior on both platforms before retiring the 8.2 images; complete
+this migration before 8.2 EOL.
 
 ## Build and validation
 
@@ -46,7 +52,11 @@ UBI/dev also validate FPM configuration and unlimited-memory CLI runner behavior
 dev checks Composer, Xdebug and wait scripts. Build contexts are allowlisted.
 These are focused checks, not a full forensic audit of inherited vendor layers.
 
-CLI retains extension headers and helpers for additional module builds. Runtime defaults remain non-root. Never inject SSH keys into builds. The metrics script assumes cgroup v1.
+CLI retains extension headers and docker-php-ext helpers for compiling additional
+modules. Its runtime default is UID 1000:0; UBI/dev use UID 1001. Derived Dockerfiles
+installing packages must explicitly use `USER root`, then restore a non-root user.
+Build-time SSH-key injection is excluded. Status/prelogin hooks are included in
+the UBI image; the metrics script currently assumes cgroup v1.
 
 ## Releases and automation
 
@@ -87,27 +97,25 @@ Platform: linux/amd64
 Platform: linux/arm64/v8
 ```
 
-These reusable images are independent of application code.
+Consume any of the three images by its published name and tag. Pin a validated
+immutable release tag or manifest digest for reproducibility; `latest` tracks the
+most recently validated release.
 
 ## GitHub setup
 
-No repository, remote, commit or publication was created. Local `git init -b main`
-was attempted but filesystem policy denied creation of `.git`. Complete it locally.
-Choose OWNER/REPO yourself and obtain its SSH URL; no remote name is assumed here.
-The following are developer-run commands, after review (GitHub CLI is optional
-setup tooling, not a build dependency):
+The Git repository is initialized and its SSH remote is
+`git@github.com:paha77/php-docker-images.git`. Only the initial README has been
+committed and pushed. Configure secrets, then review and commit the build files
+to enable the workflow. GitHub CLI is optional setup tooling, not a build dependency:
 
 ```sh
-git init -b main
-gh repo create OWNER/REPO --private
-git remote add origin git@github.com:OWNER/REPO.git
-gh secret set DOCKERHUB_USERNAME --repo OWNER/REPO
-gh secret set DOCKERHUB_TOKEN --repo OWNER/REPO
+gh secret set DOCKERHUB_USERNAME --repo paha77/php-docker-images
+gh secret set DOCKERHUB_TOKEN --repo paha77/php-docker-images
 git add .
 git commit -m "Add multi-architecture PHP image builds"
 git push -u origin main
-gh workflow enable images.yml --repo OWNER/REPO
-gh workflow run images.yml --repo OWNER/REPO --ref main
+gh workflow enable images.yml --repo paha77/php-docker-images
+gh workflow run images.yml --repo paha77/php-docker-images --ref main
 ```
 
 Create the three Docker Hub repositories under paha77 first, and confirm ownership.
