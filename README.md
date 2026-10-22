@@ -18,6 +18,12 @@ repositories and aliases remain in place.
 `versions.env` owns the branch list, PHP minimum/exact official base patches, UBI
 bases/generations, Xdebug package names and Composer version. It is a Bash config
 with associative arrays (Bash 4+); use the Docker tools wrapper on macOS.
+Both UBI branches deliberately follow the vendor's `latest` tag. Each new UBI
+build uses `--pull --no-cache` and updates packages, so newly triggered workflows
+fetch current UBI 9 PHP 8.2 and UBI 10 PHP 8.4 bases for both architectures.
+Dev consumes the matching validated UBI artifact from that run; publication loads
+those validated images without rebuilding or resolving another base. CLI PHP
+patches and Composer remain pinned, and all PHP security floors remain enforced.
 The [PHP advisory](https://www.php.net/archive/2026.php#2026-10-21-5)
 requires PHP 8.2.35 and 8.4.27 for CVE-2026-109618 and CVE-2026-109619.
 The runtime gate independently enforces those floors and the expected branch,
@@ -31,12 +37,15 @@ PHP 8.2.33 and failed the security gate. The Red Hat pages for
 [CVE-2026-109619](https://access.redhat.com/security/cve/CVE-2026-109619)
 were inaccessible during implementation. No vendor backport exception is used.
 UBI updates packages during build, then must pass the same upstream version floor.
-The new UBI 10 base is pinned by multi-platform digest. Its manifest includes
+The previously pinned UBI 10 base's manifest includes
 amd64 and arm64/v8; an ARM64 base inspection executed PHP 8.4.24, which is below
-the floor. The public UBI repository query did not offer a PHP 8.4 update or
+the floor. In that earlier check, the public UBI repository query did not offer a PHP 8.4 update or
 matching Xdebug package. Builds with package updates still executed PHP 8.4.24
 on both architectures. These remain release blockers until Red Hat supplies the
 fixed packages for both architectures; base availability alone is insufficient.
+On 22 October 2026, the current UBI 10 `latest` base executed PHP 8.4.27 on both
+amd64 and arm64/v8. This supersedes the old base-version blocker; full custom
+UBI/dev validation against the moving tags still needs a new workflow run.
 Review the configured 8.4 Xdebug package name when the vendor supplies it;
 `php8.4-pecl-xdebug` is currently unavailable. The available PHP 8.3 Xdebug package
 is not a substitute.

@@ -40,8 +40,10 @@ execute authorized work and necessary checks without repeated confirmation.
 
 - `versions.env` centralizes PHP_BRANCHES, PHP_VERSIONS, UBI_BASES, UBI_GENERATIONS,
   XDEBUG_PACKAGES and COMPOSER_BASE using Bash 4+ arrays. Avoid
-  duplicating version configuration. Keep base images version-pinned or digest-pinned
-  where practical, with deliberate security updates.
+  duplicating version configuration. UBI bases deliberately use vendor `latest`
+  tags, resolved by `--pull --no-cache` for each new build. Dev must still use its
+  matching freshly validated local UBI parent/artifact from the same run.
+  Keep official PHP CLI patches and Composer pinned, with deliberate updates.
 - `scripts/build.sh` uses the default Buildx **docker driver**, loading separate
   `local/php-{cli,ubi,dev}:{82,84}-{amd64,arm64}` tags. Do not switch builders without
   preserving dev's ability to resolve the freshly built local UBI parent.
@@ -139,7 +141,7 @@ permission errors; publication was skipped. PHP 8.4 blockers were not rechecked.
 Shell syntax and whitespace checks passed. Docker tools and image builds were
 executed. PHP 8.2.35 CLI passed on amd64; PHP 8.4.27 CLI passed on amd64 and ARM64.
 The full build failed on the updated UBI 9 amd64 image reporting PHP 8.2.33.
-The pinned UBI 10 PHP 8.4 manifest includes amd64 and arm64/v8. Both custom UBI 10
+The previously pinned UBI 10 PHP 8.4 manifest includes amd64 and arm64/v8. Both custom UBI 10
 builds executed PHP 8.4.24 and failed the floor after package updates; separate
 FPM, extension and unlimited-memory CLI runner checks passed on both platforms.
 The ARM64 8.4 dev build failed on the unavailable matching Xdebug package. Review
