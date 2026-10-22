@@ -16,7 +16,7 @@ repositories and aliases remain in place.
 ## Security and updates
 
 `versions.env` owns the branch list, PHP minimum/exact official base patches, UBI
-bases/generations, Xdebug package names and Composer version. It is a Bash config
+bases/generations, Xdebug package names/source version and Composer version. It is a Bash config
 with associative arrays (Bash 4+); use the Docker tools wrapper on macOS.
 Both UBI branches deliberately follow the vendor's `latest` tag. Each new UBI
 build uses `--pull --no-cache` and updates packages, so newly triggered workflows
@@ -37,18 +37,12 @@ PHP 8.2.33 and failed the security gate. The Red Hat pages for
 [CVE-2026-109619](https://access.redhat.com/security/cve/CVE-2026-109619)
 were inaccessible during implementation. No vendor backport exception is used.
 UBI updates packages during build, then must pass the same upstream version floor.
-The previously pinned UBI 10 base's manifest includes
-amd64 and arm64/v8; an ARM64 base inspection executed PHP 8.4.24, which is below
-the floor. In that earlier check, the public UBI repository query did not offer a PHP 8.4 update or
-matching Xdebug package. Builds with package updates still executed PHP 8.4.24
-on both architectures. These remain release blockers until Red Hat supplies the
-fixed packages for both architectures; base availability alone is insufficient.
+The previously pinned UBI 10 base executed PHP 8.4.24 after updates on both
+architectures and failed the floor.
 On 22 October 2026, the current UBI 10 `latest` base executed PHP 8.4.27 on both
-amd64 and arm64/v8. This supersedes the old base-version blocker; full custom
-UBI/dev validation against the moving tags still needs a new workflow run.
-Review the configured 8.4 Xdebug package name when the vendor supplies it;
-`php8.4-pecl-xdebug` is currently unavailable. The available PHP 8.3 Xdebug package
-is not a substitute.
+amd64 and arm64/v8. The subsequent workflow passed both custom UBI 10 jobs.
+The remaining dev failure was the unavailable `php8.4-pecl-xdebug` package.
+The available PHP 8.3 Xdebug package is not a substitute.
 If either architecture lacks a fixed base/package, the workflow fails before login
 or publication. Review vendor advisories, update versions.env as needed, and retry
 with workflow_dispatch. Never lower the floor merely to get a green build.
@@ -85,6 +79,19 @@ extensions, verify non-root defaults, and check common credential locations.
 UBI/dev also validate FPM configuration and unlimited-memory CLI runner behavior;
 dev checks Composer, Xdebug and wait scripts. Build contexts are allowlisted.
 These are focused checks, not a full forensic audit of inherited vendor layers.
+
+PHP 8.2 dev installs its existing vendor Xdebug RPM. For PHP 8.4 dev,
+`XDEBUG_PACKAGES[84]` is empty, selecting the pinned `XDEBUG_SOURCE_VERSION`
+(3.5.3) from `versions.env`. A separate official PHP build stage uses the same
+configured PHP patch and target architecture to compile Xdebug through PECL;
+only `xdebug.so` is copied into the custom UBI runtime. UBI's PHP runtime remains
+in place. This avoids unavailable PHP 8.4 RPMs/development headers and adds no
+compiler dependencies to the final image. Xdebug must load in UBI during build
+and pass runtime validation; incompatible PHP ABI or library changes fail closed.
+See [Xdebug installation](https://xdebug.org/docs/install) and
+[supported versions](https://xdebug.org/docs/compat). Direct dev Docker builds
+must now supply `PHP_VERSION`, plus `XDEBUG_SOURCE_VERSION` when selecting source
+installation; `scripts/build.sh` supplies these automatically.
 
 CLI retains extension headers and docker-php-ext helpers for compiling additional
 modules. Its runtime default is UID 1000:0; UBI/dev use UID 1001. Derived Dockerfiles
@@ -267,8 +274,16 @@ any tag. No application deployment is performed.
 The workflow split passed containerized Actionlint 1.7.7, shell syntax and
 whitespace checks. A Docker tools harness with a mock Docker command checked all
 twelve selections, the no-argument build path, invalid selectors, missing-parent
-failure and validation failure propagation. The split has not yet executed on
-GitHub; artifact transfer and publication remain unverified there.
+failure and validation failure propagation. The split executed on GitHub: all
+CLI/UBI jobs and PHP 8.2 dev jobs passed, including UBI artifact downloads.
+PHP 8.4 dev failed on the missing RPM, so publication was skipped.
+
+The Xdebug source-build fix is validated locally against PHP 8.4.27 on both
+architectures: Xdebug 3.5.3 loads and its native stack function executes. Full
+existing dev checks also validate FPM, Composer, extensions, non-root defaults,
+credential locations, wait scripts and unlimited CLI memory. GitHub execution
+of this fix and publication remain unverified. The older blockers below are
+historical results, superseded by the newer checks where stated.
 
 On 22 October 2026, the permission fix passed the full existing UBI 9 checks on
 amd64 and arm64/v8 with updated PHP 8.2.35 packages. The amd64 build used no cache.

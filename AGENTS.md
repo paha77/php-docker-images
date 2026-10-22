@@ -39,11 +39,15 @@ execute authorized work and necessary checks without repeated confirmation.
 ## Build and release architecture
 
 - `versions.env` centralizes PHP_BRANCHES, PHP_VERSIONS, UBI_BASES, UBI_GENERATIONS,
-  XDEBUG_PACKAGES and COMPOSER_BASE using Bash 4+ arrays. Avoid
+  XDEBUG_PACKAGES, XDEBUG_SOURCE_VERSION and COMPOSER_BASE using Bash 4+ arrays. Avoid
   duplicating version configuration. UBI bases deliberately use vendor `latest`
   tags, resolved by `--pull --no-cache` for each new build. Dev must still use its
   matching freshly validated local UBI parent/artifact from the same run.
   Keep official PHP CLI patches and Composer pinned, with deliberate updates.
+- An empty XDEBUG_PACKAGES entry selects the pinned source build in the dev
+  Dockerfile's official PHP stage using that branch's configured patch and target
+  architecture. Only xdebug.so is copied into UBI; retain the UBI runtime and
+  fail on extension load/runtime check failures. PHP 8.2 retains its vendor RPM.
 - `scripts/build.sh` uses the default Buildx **docker driver**, loading separate
   `local/php-{cli,ubi,dev}:{82,84}-{amd64,arm64}` tags. Do not switch builders without
   preserving dev's ability to resolve the freshly built local UBI parent.
@@ -130,6 +134,13 @@ reproducible inspection examples in README.md. Label illustrative output clearly
 never report actual image execution or publication without evidence.
 
 ## Known status and limitations
+
+The latest split CI run passed all CLI/UBI jobs and PHP 8.2 dev jobs; PHP 8.4 dev
+failed on its unavailable RPM, and publication was skipped. The source-build fix
+loads Xdebug 3.5.3 in PHP 8.4.27 and executes its native stack function on amd64
+and arm64/v8 locally. Full dev runtime checks cover FPM, Composer, extensions,
+non-root defaults, wait scripts and CLI memory. CI execution of this fix and
+publication remain unverified. These results supersede historical blockers below.
 
 On 22 October 2026, UBI 9 with updated PHP 8.2.35 passed the full existing checks
 on amd64 and arm64/v8 after restoring runner configuration/log permissions.

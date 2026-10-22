@@ -31,6 +31,7 @@ for branch in "${PHP_BRANCHES[@]}"; do
             # No --pull: use only the freshly built/loaded local UBI parent.
             docker buildx build --builder default --platform "$platform" --no-cache --load \
                 --build-arg UBI_IMAGE="local/php-ubi:$branch-$arch" --build-arg COMPOSER_BASE="$COMPOSER_BASE" \
+                --build-arg PHP_VERSION="${PHP_VERSIONS[$branch]}" --build-arg XDEBUG_SOURCE_VERSION="$XDEBUG_SOURCE_VERSION" \
                 --build-arg XDEBUG_PACKAGE="${XDEBUG_PACKAGES[$branch]}" \
                 -t "local/php-dev:$branch-$arch" images/dev
             bash scripts/check-image.sh "local/php-dev:$branch-$arch" "$platform" dev "${PHP_VERSIONS[$branch]}"
