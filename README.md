@@ -75,6 +75,10 @@ These are focused checks, not a full forensic audit of inherited vendor layers.
 CLI retains extension headers and docker-php-ext helpers for compiling additional
 modules. Its runtime default is UID 1000:0; UBI/dev use UID 1001. Derived Dockerfiles
 installing packages must explicitly use `USER root`, then restore a non-root user.
+UBI and dev restore UID 1001 ownership and owner/group write access to
+`/etc/php.ini`, `/etc/php.d/10-opcache.ini` and `/var/log/php-fpm` after package
+installation. RPM updates can reset these permissions; the S2I runner needs them
+to apply runtime settings, including the unlimited CLI memory limit.
 Build-time SSH-key injection is excluded. Status/prelogin hooks are included in
 the UBI image; the metrics script currently assumes cgroup v1. When both
 `PRELOGIN_USER` and `PRELOGIN_PASSWORD` are set, the prelogin hook requires the
@@ -228,6 +232,15 @@ automatically if secrets are already configured. Watch its result before consumi
 any tag. No application deployment is performed.
 
 ## Implementation validation status
+
+On 22 October 2026, the permission fix passed the full existing UBI 9 checks on
+amd64 and arm64/v8 with updated PHP 8.2.35 packages. The amd64 build used no cache.
+The PHP 8.2 dev image also passed on both architectures using each freshly built
+UBI parent.
+These checks supersede the earlier UBI 9 version blocker described below.
+The latest CI run before this fix reached PHP 8.2.35, then failed the CLI runner
+memory check after permission errors; publication was skipped.
+PHP 8.4 release blockers below have not been rechecked as part of this fix.
 
 Shell syntax and Git whitespace checks passed. Docker-only checks executed the
 8.4.27 CLI image on amd64 and arm64/v8 successfully. The 8.2.35 CLI image also

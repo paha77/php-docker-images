@@ -121,6 +121,13 @@ never report actual image execution or publication without evidence.
 
 ## Known status and limitations
 
+On 22 October 2026, UBI 9 with updated PHP 8.2.35 passed the full existing checks
+on amd64 and arm64/v8 after restoring runner configuration/log permissions.
+The amd64 build used no cache. PHP 8.2 dev passed on both architectures with each
+fresh UBI parent. This supersedes the historical UBI 9 floor blocker below. The latest CI
+run before the fix passed the floor but failed the CLI memory check following
+permission errors; publication was skipped. PHP 8.4 blockers were not rechecked.
+
 Shell syntax and whitespace checks passed. Docker tools and image builds were
 executed. PHP 8.2.35 CLI passed on amd64; PHP 8.4.27 CLI passed on amd64 and ARM64.
 The full build failed on the updated UBI 9 amd64 image reporting PHP 8.2.33.

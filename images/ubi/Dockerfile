@@ -17,4 +17,8 @@ RUN grep -q 'exec httpd -D FOREGROUND' /usr/libexec/s2i/run && \
 COPY conf/ /opt/app-root/etc/conf.d/
 COPY php-pre-start/ /opt/app-root/src/php-pre-start/
 COPY status/ /opt/app-root/status/
+# RPM updates can reset the writable files required by the non-root S2I runner.
+RUN chown 1001:0 /etc/php.ini /etc/php.d/10-opcache.ini && \
+    chmod ug+rw /etc/php.ini /etc/php.d/10-opcache.ini && \
+    chown -R 1001:0 /var/log/php-fpm && chmod -R ug+rwX /var/log/php-fpm
 USER 1001
