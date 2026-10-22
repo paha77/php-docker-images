@@ -66,6 +66,11 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/work" -w 
 The default Buildx **docker driver** loads each architecture under its own local
 tag: `local/php-{cli,ubi,dev}:{82,84}-{amd64,arm64}`. The dev build consumes
 that exact branch and architecture's local UBI tag, never Docker Hub latest.
+For a single image, `scripts/build.sh KIND BRANCH ARCH` selects `cli`, `ubi` or
+`dev`, a configured branch (`82` or `84`), and `amd64` or `arm64`. Run this through
+the same Docker tools wrapper. A selected dev build requires its freshly built
+UBI parent to be loaded first. With no arguments, the script still builds and
+validates all images in dependency order.
 All six images on both architectures execute PHP, check the release floor and
 extensions, verify non-root defaults, and check common credential locations.
 UBI/dev also validate FPM configuration and unlimited-memory CLI runner behavior;
@@ -106,8 +111,24 @@ Pull requests and branch pushes build all images without publishing. Default-bra
 pushes, Monday 05:23 UTC schedules, and manual runs on the default branch build,
 validate, then authenticate and publish. PR steps receive no registry credentials;
 there is no shared cache. Publishing runs serialize in one concurrency group.
-Only full-SHA-pinned checkout and QEMU actions are used. Their release commits were
-checked against upstream GitHub release pages; review source before updating pins.
+The workflow derives branch/platform matrices from `versions.env`. CLI and UBI
+have separate jobs for each branch and architecture, with matrix fail-fast
+disabled so other images still report their results. After that matrix succeeds,
+dev jobs load their exact UBI parent from the same workflow run and build and
+validate each dev image separately. A final **Docker push** job waits for every
+build and validation to succeed, loads all twelve image archives before login,
+then runs the existing publication script. A missing archive fails publication.
+The push job is skipped for PRs and non-default branches.
+
+Validated images are transferred with `docker save`/`docker load` using compressed
+GitHub Actions artifacts, retained for one day. Artifact names include kind,
+branch and architecture; rerun builds replace that run's matching artifacts.
+Rerun the entire workflow after artifacts expire. No images are pushed to Docker
+Hub for transfer between jobs. GitHub artifact storage limits must accommodate
+the twelve image archives. No new secrets or host dependencies are required.
+Checkout, QEMU and artifact actions are pinned by full SHA; the new artifact pins
+and action source were checked against the official upstream repositories.
+Review source before updating pins.
 
 Each repository gets these tags:
 
@@ -226,12 +247,19 @@ gh workflow enable images.yml --repo paha77/php-docker-images
 gh workflow run images.yml --repo paha77/php-docker-images --ref main
 ```
 
-Enable Actions in repository settings, protect the default branch, require the image
-build check and review workflow changes. The first default-branch push publishes
+Enable Actions in repository settings, protect the default branch, require the
+new per-image build checks in place of the former single `images` check, and
+review workflow changes. The first default-branch push publishes
 automatically if secrets are already configured. Watch its result before consuming
 any tag. No application deployment is performed.
 
 ## Implementation validation status
+
+The workflow split passed containerized Actionlint 1.7.7, shell syntax and
+whitespace checks. A Docker tools harness with a mock Docker command checked all
+twelve selections, the no-argument build path, invalid selectors, missing-parent
+failure and validation failure propagation. The split has not yet executed on
+GitHub; artifact transfer and publication remain unverified there.
 
 On 22 October 2026, the permission fix passed the full existing UBI 9 checks on
 amd64 and arm64/v8 with updated PHP 8.2.35 packages. The amd64 build used no cache.

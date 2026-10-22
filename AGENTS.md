@@ -50,8 +50,16 @@ execute authorized work and necessary checks without repeated confirmation.
 - `.github/workflows/images.yml` builds all images on PRs and pushes. Default-branch
   pushes, Monday 05:23 UTC schedules and workflow_dispatch on the default branch
   publish after validation. Other branches and PRs never publish.
+- CI derives branch/platform matrices from versions.env. CLI/UBI matrix jobs
+  validate and upload image archives; dev matrix jobs load the matching validated
+  UBI artifact from the same run. Docker push is a separate job gated on all builds.
+  Image artifacts expire after one day; rerun the full workflow after expiration.
+  scripts/build.sh accepts optional KIND BRANCH ARCH selectors; with no arguments
+  it retains the full local build. Selected dev builds require the fresh UBI parent.
 - GitHub-hosted Ubuntu runners use SHA-pinned checkout and QEMU actions. Review
   upstream action source and full commit IDs before updating pins.
+- Artifact upload/download actions are also SHA-pinned. Keep downloads scoped to
+  the current run, credentials confined to publication, and matrix fail-fast off.
 - Registry secrets are exposed only to the trusted publication step, after checks.
   Never use pull_request_target to run untrusted code with credentials. No shared
   build cache is currently used; any future cache must isolate untrusted PRs.
