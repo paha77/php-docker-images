@@ -17,7 +17,7 @@ jobs:
     outputs:
       platforms: ${{ steps.matrix.outputs.platforms }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
       - id: matrix
@@ -39,10 +39,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
         with:
           platforms: arm64
       - name: Build and validate image
@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           mkdir -p image-artifacts
           docker save 'local/php-${{ matrix.kind }}:${{ matrix.branch }}-${{ matrix.arch }}' | gzip -1 > 'image-artifacts/${{ matrix.kind }}-${{ matrix.branch }}-${{ matrix.arch }}.tar.gz'
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: image-${{ matrix.kind }}-${{ matrix.branch }}-${{ matrix.arch }}
           path: image-artifacts/*.tar.gz
@@ -69,13 +69,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
         with:
           platforms: arm64
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: image-ubi-${{ matrix.branch }}-${{ matrix.arch }}
           path: image-artifacts
@@ -87,7 +87,7 @@ jobs:
         run: |
           set -euo pipefail
           docker save 'local/php-dev:${{ matrix.branch }}-${{ matrix.arch }}' | gzip -1 > 'image-artifacts/dev-${{ matrix.branch }}-${{ matrix.arch }}.tar.gz'
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: image-dev-${{ matrix.branch }}-${{ matrix.arch }}
           path: image-artifacts/dev-*.tar.gz
@@ -102,10 +102,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           pattern: image-*
           merge-multiple: true

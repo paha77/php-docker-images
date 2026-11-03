@@ -144,7 +144,9 @@ Hub for transfer between jobs. GitHub artifact storage limits must accommodate
 the twelve image archives. No new secrets or host dependencies are required.
 Checkout, QEMU and artifact actions are pinned by full SHA; the new artifact pins
 and action source were checked against the official upstream repositories.
-Review source before updating pins.
+Review source before updating pins. All workflow actions use Node 24 runtimes:
+checkout v5, QEMU v4, upload-artifact v6 and download-artifact v7. These require
+Actions runner v2.327.1 or newer, supplied by the GitHub-hosted Ubuntu runners.
 
 Each repository gets these tags:
 
