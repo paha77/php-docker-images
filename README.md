@@ -221,6 +221,25 @@ Consume any of the six images by its published name and tag. Pin a validated
 immutable release tag or manifest digest for reproducibility; `latest` tracks the
 most recently validated release.
 
+### Docker Hub descriptions
+
+After successful publication, `scripts/describe.sh` updates all six Docker Hub
+short descriptions and Markdown overviews through the Docker Hub API. Each
+overview includes image features, GitHub source/Dockerfile/documentation links,
+the published release tag, source commit, workflow run, platforms, and a summary
+of the validation gates. Versions come from `versions.env`; source and run links
+come from GitHub Actions. This describes the latest published run, not every tag's
+individual history. Image pushes alone do not synchronize Docker Hub overviews.
+
+The step reuses `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`. The credential must
+also be allowed to edit repository information; push permission alone may not
+provide metadata access for every account/token type. No extra secret or action
+is added. A metadata API failure fails the job visibly after images have already
+been published, and retention is skipped. Updates across repositories can be
+partial. The generated overviews replace manual Docker Hub overview edits; edit
+`scripts/describe.py` to change their content. Live metadata updates remain
+unverified until a successful publishing workflow executes this step.
+
 ### Automatic retention
 
 After every successful publication, `scripts/cleanup.sh` keeps the newest two
