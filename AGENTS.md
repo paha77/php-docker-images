@@ -38,13 +38,17 @@ execute authorized work and necessary checks without repeated confirmation.
 
 ## Build and release architecture
 
-- UBI PHP 8.4 checks public UBI repositories for `php8.4-cli` on every build.
-  When absent, a temporary AlmaLinux EL10 AppStream repository supplies only
-  `php8.4`/`php8.4-*` packages, with GPG checks and a bundled AlmaLinux 10 key.
+- After normal updates, both UBI branches check the PHP version requirement.
+  Only an outdated version triggers a temporary AlmaLinux PHP patch: EL9 for
+  8.2, restricted to `php-8.2.*`/`php-*-8.2.*`; EL10 for 8.4, restricted to
+  `php8.4`/`php8.4-*`. GPG checks use bundled AlmaLinux keys. EL9 uses
+  module_hotfixes only for the restricted fallback, without switching streams.
   Non-PHP dependencies stay on UBI; do not install clone release/repository RPMs.
   Remove the fallback repository after the update. Metadata failures must fail
   closed, and the existing PHP security floor and runtime checks still apply.
-  When UBI offers PHP 8.4, use UBI only; PHP 8.2 retains its existing update path.
+  Recheck after patching and fail if still too old. Wrong branches/broken PHP
+  fail directly. A compliant UBI version never contacts AlmaLinux. Dev inherits
+  the validated parent; official Debian CLI bases remain pinned.
 - `versions.env` centralizes PHP_BRANCHES, PHP_VERSIONS, UBI_BASES, UBI_GENERATIONS,
   XDEBUG_PACKAGES, XDEBUG_SOURCE_VERSION and COMPOSER_BASE using Bash 4+ arrays. Avoid
   duplicating version configuration. UBI bases deliberately use vendor `latest`
@@ -99,7 +103,7 @@ documentation and a check of the exact fixed package release.
 PHP 8.2 reaches upstream security end of life on 31 December 2026. Maintain the
 README upgrade path to the separately named 8.4 images (security support through
 31 December 2028). PHP 8.5 is deferred until UBI provides it. Adding branches also
-requires updating the supported branch/floor map in scripts/check-image.sh,
+requires updating the shared branch/floor map in images/ubi/php-update/check-version.php,
 not just versions.env.
 
 UBI package updates must pass the PHP floor. If a fixed release or base is missing
@@ -141,6 +145,17 @@ reproducible inspection examples in README.md. Label illustrative output clearly
 never report actual image execution or publication without evidence.
 
 ## Known status and limitations
+
+The version-driven PHP patch passed all four UBI and all four dev builds locally
+on 17 November 2026. Only PHP 8.4 amd64 needed patching. Isolated tests on both
+architectures downgraded PHP 8.2 to 8.2.30 and, with UBI PHP updates hidden,
+successfully patched to signed AlmaLinux 8.2.35 without non-PHP AlmaLinux RPMs.
+Mock selection/failure tests, lowered-minimum and branch-mismatch checks, shell
+syntax and whitespace passed. CLI checks passed on existing PHP 8.2 amd64 and
+PHP 8.4 amd64/ARM64 images; the local PHP 8.2 ARM64 CLI image was absent.
+CI execution and publication of this refactor remain unverified. No images
+were published during these checks. These results supersede earlier fallback
+behavior and local blockers below.
 
 On 17 November 2026, the restricted PHP 8.4 fallback passed full local UBI
 checks on amd64 and arm64/v8. amd64 used signed AlmaLinux `8.4.27-1.el10_2`

@@ -1,12 +1,13 @@
 ARG UBI_BASE
 FROM ${UBI_BASE}
 USER root
-COPY php84/ /tmp/php84/
+ARG PHP_VERSION
+COPY php-update/ /tmp/php-update/
 # Refresh security packages; the release checks still enforce the PHP floor.
 RUN sed -i '/override_install_langs=*/d' /etc/yum.conf && \
-    yum -y update && bash /tmp/php84/update.sh && \
+    yum -y update && bash /tmp/php-update/update.sh "$PHP_VERSION" && \
     yum -y reinstall glibc-common && yum clean all && \
-    rm -rf /var/cache/dnf /tmp/php84 /etc/ssh/ssh_config.d/05-redhat.conf
+    rm -rf /var/cache/dnf /tmp/php-update /etc/ssh/ssh_config.d/05-redhat.conf
 # Fail on upstream runner drift rather than silently producing a broken CLI runner.
 RUN grep -q 'exec httpd -D FOREGROUND' /usr/libexec/s2i/run && \
     sed 's/exec httpd -D FOREGROUND/exec "$@"/g' /usr/libexec/s2i/run > /usr/libexec/s2i/run-cli && \

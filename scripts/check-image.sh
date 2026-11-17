@@ -5,19 +5,9 @@ run=(docker run --rm --platform "$platform" --entrypoint /bin/bash "$image")
 user=$(docker image inspect --format '{{.Config.User}}' "$image")
 [[ "$user" == 1000:0 || "$user" == 1001 ]]
 "${run[@]}" -ec 'test "$(id -u)" != 0; php -v; php -r '\''exit(PHP_SAPI === "cli" ? 0 : 1);'\'''
-# Enforce the branch and advisory floor independently of configurable base versions.
-# CVE-2026-109618 and CVE-2026-109619 (21 October 2026).
-"${run[@]}" -ec 'php -r '\''
-    $branch = implode(".", array_slice(explode(".", $argv[1]), 0, 2));
-    $floors = ["8.2" => "8.2.35", "8.4" => "8.4.27"];
-    $actualBranch = PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;
-    if (!isset($floors[$branch]) || $actualBranch !== $branch ||
-        !version_compare(PHP_VERSION, $floors[$branch], ">=") ||
-        !version_compare(PHP_VERSION, $argv[1], ">=")) {
-        fwrite(STDERR, "PHP " . PHP_VERSION . " fails branch/security minimum for " . $argv[1] . "\n");
-        exit(1);
-    }
-'\'' -- "$1"' -- "$minimum"
+# Use the same branch/security requirement as the build-time AlmaLinux patch.
+docker run --rm -i --platform "$platform" --entrypoint php "$image" /dev/stdin "$minimum" \
+    < "$(dirname "$0")/../images/ubi/php-update/check-version.php"
 if [[ "$kind" == cli ]]; then
     modules='gd,exif,mbstring,zip,gmp,bcmath'
 else

@@ -22,7 +22,8 @@ for branch in "${PHP_BRANCHES[@]}"; do
         fi
         if [[ "$kind_filter" == all || "$kind_filter" == ubi ]]; then
             docker buildx build --builder default --platform "$platform" --pull --no-cache --load \
-                --build-arg UBI_BASE="${UBI_BASES[$branch]}" -t "local/php-ubi:$branch-$arch" images/ubi
+                --build-arg UBI_BASE="${UBI_BASES[$branch]}" --build-arg PHP_VERSION="${PHP_VERSIONS[$branch]}" \
+                -t "local/php-ubi:$branch-$arch" images/ubi
             bash scripts/check-image.sh "local/php-ubi:$branch-$arch" "$platform" ubi "${PHP_VERSIONS[$branch]}"
         fi
         if [[ "$kind_filter" == all || "$kind_filter" == dev ]]; then
