@@ -136,3 +136,9 @@ jobs:
           trap 'docker logout >/dev/null 2>&1' EXIT
           printf '%s' "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
           bash scripts/publish.sh
+      - name: Retain newest two complete Docker Hub releases
+        env:
+          DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE || 'paha77' }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: bash scripts/cleanup.sh

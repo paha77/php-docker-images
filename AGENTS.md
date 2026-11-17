@@ -77,7 +77,7 @@ execute authorized work and necessary checks without repeated confirmation.
   upstream action source and full commit IDs before updating pins.
 - Artifact upload/download actions are also SHA-pinned. Keep downloads scoped to
   the current run, credentials confined to publication, and matrix fail-fast off.
-- Registry secrets are exposed only to the trusted publication step, after checks.
+- Registry secrets are exposed only to trusted publication/retention steps, after checks.
   Never use pull_request_target to run untrusted code with credentials. No shared
   build cache is currently used; any future cache must isolate untrusted PRs.
 - Publishing runs serialize through workflow concurrency. Fail closed on build,
@@ -115,11 +115,18 @@ unrelated assets into image contexts. Preserve context allowlists in .dockerigno
 Never add SSH-key injection hooks. Never put secrets in build
 args, image layers, workflow output or logs. Use only GitHub Actions secrets
 `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`, with repository-scoped read/write access
-where supported and no delete permission. Preserve non-root runtime defaults.
+where supported, including Delete for the authorized two-release retention.
+Preserve non-root runtime defaults.
 Install only packages/extensions needed for the defined image behavior; CLI
 extension headers/helpers are intentionally retained for additional module builds.
 
 ## Validation
+
+After successful publication, scripts/cleanup.sh retains the newest two complete
+release families per repository and protects aliases and their referenced releases.
+Release tags must remain mutable in Docker Hub to permit retention. Unknown and
+incomplete tags remain untouched. Run scripts/test-cleanup.py in the Docker tools
+image when changing retention. No live deletion is a validation command.
 
 Run the narrowest relevant checks and fix only failures caused by the change.
 For shell changes, run `bash -n scripts/*.sh`; check whitespace with

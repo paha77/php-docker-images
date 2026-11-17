@@ -187,8 +187,9 @@ Each repository gets these tags:
 * `php<VERSION>` and `latest`: mutable, validated multi-platform compatibility aliases
   within each branch's separate repositories.
 
-Configure Docker Hub immutable-tag rules for the `*-run*` release/staging tags where
-supported; never reuse them. The run identity distinguishes scheduled package
+Release/staging tags must remain mutable in Docker Hub so retention can delete
+them; disable any immutable-tag rule matching these tags. Never reuse them.
+The run identity distinguishes scheduled package
 refreshes without source changes. UBI can report a later 8.2 patch than the tag's
 minimum (likewise for 8.4); runtime checks and rpm output record what was built.
 All six immutable manifests pass before aliases are promoted. Registries offer no
@@ -220,6 +221,30 @@ Consume any of the six images by its published name and tag. Pin a validated
 immutable release tag or manifest digest for reproducibility; `latest` tracks the
 most recently validated release.
 
+### Automatic retention
+
+After every successful publication, `scripts/cleanup.sh` keeps the newest two
+complete releases per repository, including their `-amd64` and `-arm64` tags,
+and deletes older complete release families. It follows every API page and
+inventories all six repositories before deleting. `latest`, all `php<VERSION>`
+aliases and releases referenced by those aliases remain protected. Unrecognized
+tags and incomplete releases are left alone. Fewer than two complete releases,
+API failures, missing latest, and deletion failures fail the job visibly.
+Publication has already completed if cleanup fails; deletion can be partial.
+Older pinned release tags will stop being available after retention removes them.
+
+The existing `DOCKERHUB_TOKEN` must have Read, Write **and Delete** access to the
+six repositories. No additional secret is used. Keep its account/repository scope
+as narrow as Docker Hub permits. CI supplies Python 3; the Docker tools image
+includes it for local execution. No new host dependency is required.
+
+Run retention tests without registry access:
+
+```sh
+docker build -t php-image-tools tools
+docker run --rm -v "$PWD:/work:ro" -w /work php-image-tools -c 'python3 -B scripts/test-cleanup.py'
+```
+
 ## GitHub setup
 
 ### Choose the Docker Hub namespace
@@ -250,7 +275,7 @@ affect local build tags or the dev image's freshly built UBI parent.
 2. Open your avatar → **Account settings** → **Personal access tokens** →
    **Generate new token**. Give it a dedicated description such as
    `php-docker-images GitHub Actions` and choose an expiration date.
-3. Grant repository **Read & Write** access without Delete permission; leave
+3. Grant repository **Read, Write & Delete** access for publication and retention; leave
    unrelated product access disabled. A personal access token applies to all
    repositories the account can access, so use an account with limited access
    where practical. See Docker's [personal access token instructions](https://docs.docker.com/security/access-tokens/personal-access-tokens/).
@@ -260,8 +285,8 @@ affect local build tags or the dev image's freshly built UBI parent.
 If `paha77` is an organization with a Docker Team or Business subscription, prefer
 an [organization access token](https://docs.docker.com/security/access-tokens/organization-access-tokens/):
 select the organization in Docker Home → **Identity & auth** → **Access tokens**
-and generate a token with read/write access limited to the six repositories,
-without delete or organization administration permissions. For this token type,
+and generate a token with read/write/delete access limited to the six repositories,
+without organization administration permissions. For this token type,
 use the organization name as the login username.
 
 ### Set GitHub Actions secrets
