@@ -38,6 +38,13 @@ execute authorized work and necessary checks without repeated confirmation.
 
 ## Build and release architecture
 
+- UBI PHP 8.4 checks public UBI repositories for `php8.4-cli` on every build.
+  When absent, a temporary AlmaLinux EL10 AppStream repository supplies only
+  `php8.4`/`php8.4-*` packages, with GPG checks and a bundled AlmaLinux 10 key.
+  Non-PHP dependencies stay on UBI; do not install clone release/repository RPMs.
+  Remove the fallback repository after the update. Metadata failures must fail
+  closed, and the existing PHP security floor and runtime checks still apply.
+  When UBI offers PHP 8.4, use UBI only; PHP 8.2 retains its existing update path.
 - `versions.env` centralizes PHP_BRANCHES, PHP_VERSIONS, UBI_BASES, UBI_GENERATIONS,
   XDEBUG_PACKAGES, XDEBUG_SOURCE_VERSION and COMPOSER_BASE using Bash 4+ arrays. Avoid
   duplicating version configuration. UBI bases deliberately use vendor `latest`
@@ -134,6 +141,25 @@ reproducible inspection examples in README.md. Label illustrative output clearly
 never report actual image execution or publication without evidence.
 
 ## Known status and limitations
+
+On 17 November 2026, the restricted PHP 8.4 fallback passed full local UBI
+checks on amd64 and arm64/v8. amd64 used signed AlmaLinux `8.4.27-1.el10_2`
+packages because its public UBI repositories lacked PHP 8.4; ARM64 used public
+UBI `8.4.27-2.el10_3.1` without fallback. The amd64 image has no non-PHP
+AlmaLinux packages, fallback repository or setup files. Repository-selection
+tests passed, including metadata/update failure propagation and cleanup.
+Both PHP 8.4 dev builds passed full existing runtime checks with the fresh
+matching UBI parents. Shell syntax and whitespace checks passed. These results
+supersede the local PHP 8.4 blockers below. CI execution of the fallback and
+publication remain unverified; no images were published.
+
+Run 43879000434 failed on 17 November 2026: UBI 10 PHP 8.4 amd64 still
+executed PHP 8.4.24 after a successful package update, failing the 8.4.27 floor.
+Dev and publication were skipped. This supersedes earlier UBI 10 amd64 success;
+retain the floor and retry the full workflow after reviewing a fixed vendor
+base/package. The run's one-day artifacts must not be reused after expiration.
+A fresh local amd64 build on 17 November reproduced PHP 8.4.24 and the floor
+failure after successful package updates; no images were published.
 
 The latest split CI run passed all CLI/UBI jobs and PHP 8.2 dev jobs; PHP 8.4 dev
 failed on its unavailable RPM, and publication was skipped. The source-build fix

@@ -24,6 +24,21 @@ fetch current UBI 9 PHP 8.2 and UBI 10 PHP 8.4 bases for both architectures.
 Dev consumes the matching validated UBI artifact from that run; publication loads
 those validated images without rebuilding or resolving another base. CLI PHP
 patches and Composer remain pinned, and all PHP security floors remain enforced.
+For PHP 8.4, the UBI build explicitly queries the public UBI repositories for
+`php8.4-cli`. While it is absent, a temporary AlmaLinux EL10 AppStream repository
+supplies only `php8.4` and `php8.4-*` RPMs via `includepkgs`; non-PHP packages and
+dependencies continue to come from UBI. Packages must pass GPG signature checks
+using the bundled [AlmaLinux 10 signing key](https://almalinux.org/security/)
+(fingerprint `EE6D B7B9 8F5B F5ED D9DA 0DE5 DEE5 C11C C2A1 E572`).
+No AlmaLinux release/repository RPM is installed. The temporary repository is
+removed after the PHP update and is not available to downstream package installs.
+Each fresh build checks UBI again and uses only UBI when PHP 8.4 is offered;
+an unavailable repository fails the build rather than triggering a fallback.
+If UBI offers an outdated PHP 8.4 package, the unchanged security gate fails.
+PHP 8.2 uses its existing UBI-only update path. The base OS, S2I runner and image
+names remain unchanged; the fallback PHP RPMs are AlmaLinux packages, not Red Hat
+packages. See the [AlmaLinux PHP security advisory](https://errata.almalinux.org/10/ALSA-2026-87071.html).
+
 The [PHP advisory](https://www.php.net/archive/2026.php#2026-10-21-5)
 requires PHP 8.2.35 and 8.4.27 for CVE-2026-109618 and CVE-2026-109619.
 The runtime gate independently enforces those floors and the expected branch,
@@ -64,6 +79,12 @@ provided so Bash/jq need not be installed on the host:
 ```sh
 docker build -t php-image-tools tools
 docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/work" -w /work php-image-tools scripts/build.sh
+```
+
+Repository-selection tests (no package downloads or Docker socket required):
+
+```sh
+docker run --rm -v "$PWD:/work:ro" -w /work php-image-tools scripts/test-php84-fallback.sh
 ```
 
 The default Buildx **docker driver** loads each architecture under its own local
@@ -272,6 +293,29 @@ automatically if secrets are already configured. Watch its result before consumi
 any tag. No application deployment is performed.
 
 ## Implementation validation status
+
+The PHP 8.4 repository fallback passed full local UBI checks on amd64 and
+arm64/v8 on 17 November 2026. On amd64, public UBI offered no PHP 8.4 RPMs;
+the restricted AlmaLinux repository supplied `8.4.27-1.el10_2`. On ARM64, public
+UBI already supplied `8.4.27-2.el10_3.1`, so no fallback was used. The amd64
+image contains no non-PHP AlmaLinux packages and no fallback repository or setup
+files. Repository-selection tests cover native UBI preference, the PHP 8.2
+no-op, fallback restrictions, metadata failure and update failure cleanup.
+Both PHP 8.4 dev images also passed the existing runtime checks against their
+fresh matching UBI parents, including FPM, Xdebug, Composer, extensions, non-root
+defaults and CLI memory. Shell syntax and whitespace checks passed. CI execution
+of this fallback and publication remain unverified; no images were published.
+
+Run [43879000434](https://github.com/paha77/php-docker-images/actions/runs/43879000434)
+failed on 17 November 2026 in the PHP 8.4 UBI amd64 job: the vendor `latest`
+base, after a successful package update, still executed PHP 8.4.24 and failed
+the required 8.4.27 floor. Dev and publication were skipped. This was a
+vendor availability blocker and supersedes the earlier successful UBI 10 result
+for this platform. Keep the security floor intact; after a fixed vendor base or
+package becomes available, review its version and dispatch the entire workflow
+again (the one-day artifacts from this run cannot safely be reused).
+A fresh local amd64 build on 17 November reproduced the same failure after
+`--pull --no-cache` and successful package updates. No images were published.
 
 The workflow split passed containerized Actionlint 1.7.7, shell syntax and
 whitespace checks. A Docker tools harness with a mock Docker command checked all
