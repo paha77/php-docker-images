@@ -1,7 +1,7 @@
 <?php
-// CVE-2026-109618 and CVE-2026-109619: independent of the configured minimum.
+// Independent security floors; PHP 8.3 includes the November 2026 security release.
 $branch = implode('.', array_slice(explode('.', $argv[1]), 0, 2));
-$floors = ['8.2' => '8.2.35', '8.4' => '8.4.27'];
+$floors = ['8.2' => '8.2.35', '8.3' => '8.3.37', '8.4' => '8.4.27'];
 $actualBranch = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
 if (!isset($floors[$branch]) || $actualBranch !== $branch) {
     fwrite(STDERR, "Unsupported/mismatched PHP branch for {$argv[1]}\n");

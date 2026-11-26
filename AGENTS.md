@@ -2,7 +2,7 @@
 
 ## Scope
 
-This is a standalone repository for building, validating and publishing six
+This is a standalone repository for building, validating and publishing nine
 reusable PHP images to Docker Hub. These instructions are sufficient to resume
 work without conversation history. Do not inspect or modify external repositories
 or consumers. Do not start application containers or deploy images.
@@ -12,6 +12,9 @@ or consumers. Do not start application containers or deploy images.
 | `paha77/php-82-cli` | `images/cli` | Official PHP CLI with GD, EXIF, mbstring, ZIP, GMP, BCMath; Europe/Vienna timezone; UID 1000:0 |
 | `paha77/s2i-ubi9-php82` | `images/ubi` | UBI 9 Apache/FPM, S2I CLI runner, status/prelogin hooks; UID 1001 |
 | `paha77/php-82-dev` | `images/dev` | Custom UBI plus Xdebug, Composer, wait scripts and UID aliases; UID 1001 |
+| `paha77/php-83-cli` | `images/cli` | Same CLI behavior on PHP 8.3; UID 1000:0 |
+| `paha77/s2i-ubi10-php83` | `images/ubi` | Same Apache/FPM and S2I behavior on UBI 10 PHP 8.3; UID 1001 |
+| `paha77/php-83-dev` | `images/dev` | Fresh custom UBI 10 PHP 8.3 plus source-built Xdebug/dev tools; UID 1001 |
 | `paha77/php-84-cli` | `images/cli` | Same CLI behavior on PHP 8.4; UID 1000:0 |
 | `paha77/s2i-ubi10-php84` | `images/ubi` | Same Apache/FPM and S2I behavior on UBI 10 PHP 8.4; UID 1001 |
 | `paha77/php-84-dev` | `images/dev` | Fresh custom UBI 10 PHP 8.4 plus dev tools; UID 1001 |
@@ -38,10 +41,10 @@ execute authorized work and necessary checks without repeated confirmation.
 
 ## Build and release architecture
 
-- After normal updates, both UBI branches check the PHP version requirement.
+- After normal updates, all UBI branches check the PHP version requirement.
   Only an outdated version triggers a temporary AlmaLinux PHP patch: EL9 for
-  8.2, restricted to `php-8.2.*`/`php-*-8.2.*`; EL10 for 8.4, restricted to
-  `php8.4`/`php8.4-*`. GPG checks use bundled AlmaLinux keys. EL9 uses
+  8.2, restricted to `php-8.2.*`/`php-*-8.2.*`; EL10 for 8.3/8.4, restricted to
+  `php-8.3.*`/`php-*-8.3.*` or `php8.4`/`php8.4-*`. GPG checks use bundled AlmaLinux keys. EL9 uses
   module_hotfixes only for the restricted fallback, without switching streams.
   Non-PHP dependencies stay on UBI; do not install clone release/repository RPMs.
   Remove the fallback repository after the update. Metadata failures must fail
@@ -60,7 +63,7 @@ execute authorized work and necessary checks without repeated confirmation.
   architecture. Only xdebug.so is copied into UBI; retain the UBI runtime and
   fail on extension load/runtime check failures. PHP 8.2 retains its vendor RPM.
 - `scripts/build.sh` uses the default Buildx **docker driver**, loading separate
-  `local/php-{cli,ubi,dev}:{82,84}-{amd64,arm64}` tags. Do not switch builders without
+  `local/php-{cli,ubi,dev}:{82,83,84}-{amd64,arm64}` tags. Do not switch builders without
   preserving dev's ability to resolve the freshly built local UBI parent.
 - Every image targets `linux/amd64` and `linux/arm64/v8`. ARM64 must actually
   execute, including on an emulated CI runner; an amd64-only build is insufficient.
@@ -92,6 +95,11 @@ execute authorized work and necessary checks without repeated confirmation.
   must fail visibly; a new dispatch can produce a complete new release.
 
 ## Security requirements
+
+PHP 8.3 uses the same build path as 8.4 with UBI 10, source-built Xdebug and
+both architectures. Its pinned version and independent floor are 8.3.37 (the
+19 November 2026 security release). Its EL10 fallback permits only `php-8.3.*` and
+`php-*-8.3.*`. PHP 8.3 security support ends 31 December 2027.
 
 The 21 October 2026 PHP advisory identifies 8.2.35 and 8.4.27 as the fixed releases for
 CVE-2026-109618 and CVE-2026-109619. Enforce the corresponding branch and floor
@@ -152,6 +160,13 @@ reproducible inspection examples in README.md. Label illustrative output clearly
 never report actual image execution or publication without evidence.
 
 ## Known status and limitations
+
+On 26 November 2026, PHP 8.3 CLI, UBI and dev passed full local builds/runtime
+checks on amd64 and arm64/v8. Both UBI bases supplied 8.3.37 without fallback.
+Dev used fresh matching parents and source-built Xdebug 3.5.3. All three branches
+passed fallback selection/failure tests; shell syntax, configuration and whitespace
+checks passed. PHP 8.3 rejected a mismatched 8.4 runtime requirement. CI execution
+and publication of PHP 8.3 remain unverified; no images were published.
 
 The version-driven PHP patch passed all four UBI and all four dev builds locally
 on 17 November 2026. Only PHP 8.4 amd64 needed patching. Isolated tests on both

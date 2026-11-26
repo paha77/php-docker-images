@@ -26,7 +26,7 @@ for branch in "${PHP_BRANCHES[@]}"; do
         repositories+=("$repo") releases+=("$release") versions+=("$version")
     done
 done
-# All six immutable manifests must pass before any compatibility alias is changed.
+# All release manifests must pass before any compatibility alias is changed.
 for index in "${!repositories[@]}"; do
     repo=${repositories[$index]}
     for tag in "php${versions[$index]}" latest; do

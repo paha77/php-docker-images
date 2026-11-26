@@ -33,9 +33,11 @@ exit "${UPDATE_STATUS:-0}"
 MOCK
 chmod +x "$fixture/php" "$fixture/dnf"
 script=images/ubi/php-update/update.sh
-for minimum in 8.2.35 8.4.27; do
+for minimum in 8.2.35 8.3.37 8.4.27; do
     if [[ $minimum == 8.2.* ]]; then
         export EXPECTED_GENERATION=9 EXPECTED_INCLUDE='php-8.2.*,php-*-8.2.*'
+    elif [[ $minimum == 8.3.* ]]; then
+        export EXPECTED_GENERATION=10 EXPECTED_INCLUDE='php-8.3.*,php-*-8.3.*'
     else
         export EXPECTED_GENERATION=10 EXPECTED_INCLUDE='php8.4,php8.4-*'
     fi

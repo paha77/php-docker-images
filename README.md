@@ -5,22 +5,40 @@
 | paha77/php-82-cli | PHP CLI with GD, EXIF, mbstring, ZIP, GMP, BCMath and Europe/Vienna timezone | Official PHP CLI, Debian Bookworm |
 | paha77/s2i-ubi9-php82 | Apache/FPM, S2I CLI runner, status endpoints, prelogin | Red Hat UBI 9 PHP 8.2 |
 | paha77/php-82-dev | Xdebug, Composer, wait scripts and local UID aliases | Freshly built custom UBI |
+| paha77/php-83-cli | Same CLI behavior as 8.4 | Official PHP 8.3 CLI, Debian Bookworm |
+| paha77/s2i-ubi10-php83 | Same Apache/FPM and S2I behavior as 8.4 | Red Hat UBI 10 PHP 8.3 |
+| paha77/php-83-dev | Same dev tools as 8.4 | Freshly built custom UBI 10 PHP 8.3 |
 | paha77/php-84-cli | Same CLI extensions, timezone and user as 8.2 CLI | Official PHP 8.4 CLI, Debian Bookworm |
 | paha77/s2i-ubi10-php84 | Apache/FPM, S2I CLI runner, status endpoints, prelogin | Red Hat UBI 10 PHP 8.4 |
 | paha77/php-84-dev | Xdebug, Composer, wait scripts and local UID aliases | Freshly built custom UBI 10 PHP 8.4 |
 
 All releases target `linux/amd64` and `linux/arm64/v8` (including M1 Macs).
-This repository builds, validates and publishes both branches; the existing 8.2
+This repository builds, validates and publishes all three branches; the existing 8.2
 repositories and aliases remain in place.
 
 ## Security and updates
 
+PHP 8.3 follows the PHP 8.4 build and release path, including UBI 10, pinned
+source-built Xdebug, matching fresh UBI parents and both architectures. Its pinned
+version and independent security floor are 8.3.37, the
+[19 November 2026 security release](https://www.php.net/archive/2026.php#2026-11-19-3).
+Its signed EL10 fallback permits only `php-8.3.*` and `php-*-8.3.*` packages.
+PHP 8.3 security support ends 31 December 2027.
+
+The branch selector also accepts `83`; local tags include `83-amd64` and
+`83-arm64`. There are now nine repositories and eighteen image archives per run.
+Before publication, create `php-83-cli`,
+`s2i-ubi10-php83` and `php-83-dev` in the selected Docker Hub namespace and grant
+the existing token the same metadata and Read, Write & Delete access as for 8.4.
+The generated CI matrices, publication, descriptions and retention include 8.3
+automatically through `versions.env`.
+
 `versions.env` owns the branch list, PHP minimum/exact official base patches, UBI
 bases/generations, Xdebug package names/source version and Composer version. It is a Bash config
 with associative arrays (Bash 4+); use the Docker tools wrapper on macOS.
-Both UBI branches deliberately follow the vendor's `latest` tag. Each new UBI
+All UBI branches deliberately follow the vendor's `latest` tag. Each new UBI
 build uses `--pull --no-cache` and updates packages, so newly triggered workflows
-fetch current UBI 9 PHP 8.2 and UBI 10 PHP 8.4 bases for both architectures.
+fetch current UBI 9 PHP 8.2 and UBI 10 PHP 8.3/8.4 bases for both architectures.
 Dev consumes the matching validated UBI artifact from that run; publication loads
 those validated images without rebuilding or resolving another base. CLI PHP
 patches and Composer remain pinned, and all PHP security floors remain enforced.
@@ -28,9 +46,9 @@ After normal package updates, each UBI build checks the installed PHP against
 its configured minimum, expected branch and independent security floor. If it
 passes, no alternative repository is contacted. If the version is too old, a
 temporary AlmaLinux AppStream repository patches PHP: EL9 for PHP 8.2, EL10 for
-PHP 8.4. This applies even when UBI offers PHP packages that are too old.
+PHP 8.3/8.4. This applies even when UBI offers PHP packages that are too old.
 The patch is restricted with `includepkgs`: `php-8.2.*`/`php-*-8.2.*` for EL9,
-and `php8.4`/`php8.4-*` for EL10. EL9 modular filtering is bypassed only in the
+and `php-8.3.*`/`php-*-8.3.*` or `php8.4`/`php8.4-*` for EL10. EL9 modular filtering is bypassed only in the
 temporary repository, with version patterns preventing a switch to another PHP
 branch. Non-PHP packages and dependencies continue to come from UBI.
 Packages must pass GPG signature checks using the bundled
@@ -96,23 +114,23 @@ docker run --rm -v "$PWD:/work:ro" -w /work php-image-tools scripts/test-php-fal
 ```
 
 The default Buildx **docker driver** loads each architecture under its own local
-tag: `local/php-{cli,ubi,dev}:{82,84}-{amd64,arm64}`. The dev build consumes
+tag: `local/php-{cli,ubi,dev}:{82,83,84}-{amd64,arm64}`. The dev build consumes
 that exact branch and architecture's local UBI tag, never Docker Hub latest.
 For a single image, `scripts/build.sh KIND BRANCH ARCH` selects `cli`, `ubi` or
-`dev`, a configured branch (`82` or `84`), and `amd64` or `arm64`. Run this through
+`dev`, a configured branch (`82`, `83` or `84`), and `amd64` or `arm64`. Run this through
 the same Docker tools wrapper. A selected dev build requires its freshly built
 UBI parent to be loaded first. With no arguments, the script still builds and
 validates all images in dependency order.
 Direct UBI Docker builds must supply `PHP_VERSION` as well as `UBI_BASE`;
 `scripts/build.sh` supplies both from `versions.env`.
-All six images on both architectures execute PHP, check the release floor and
+All nine images on both architectures execute PHP, check the release floor and
 extensions, verify non-root defaults, and check common credential locations.
 UBI/dev also validate FPM configuration and unlimited-memory CLI runner behavior;
 dev checks Composer, Xdebug and wait scripts. Build contexts are allowlisted.
 These are focused checks, not a full forensic audit of inherited vendor layers.
 
-PHP 8.2 dev installs its existing vendor Xdebug RPM. For PHP 8.4 dev,
-`XDEBUG_PACKAGES[84]` is empty, selecting the pinned `XDEBUG_SOURCE_VERSION`
+PHP 8.2 dev installs its existing vendor Xdebug RPM. For PHP 8.3/8.4 dev,
+`XDEBUG_PACKAGES[83]` and `[84]` are empty, selecting the pinned `XDEBUG_SOURCE_VERSION`
 (3.5.3) from `versions.env`. A separate official PHP build stage uses the same
 configured PHP patch and target architecture to compile Xdebug through PECL;
 only `xdebug.so` is copied into the custom UBI runtime. UBI's PHP runtime remains
@@ -163,7 +181,7 @@ have separate jobs for each branch and architecture, with matrix fail-fast
 disabled so other images still report their results. After that matrix succeeds,
 dev jobs load their exact UBI parent from the same workflow run and build and
 validate each dev image separately. A final **Docker push** job waits for every
-build and validation to succeed, loads all twelve image archives before login,
+build and validation to succeed, loads all eighteen image archives before login,
 then runs the existing publication script. A missing archive fails publication.
 The push job is skipped for PRs and non-default branches.
 
@@ -172,7 +190,7 @@ GitHub Actions artifacts, retained for one day. Artifact names include kind,
 branch and architecture; rerun builds replace that run's matching artifacts.
 Rerun the entire workflow after artifacts expire. No images are pushed to Docker
 Hub for transfer between jobs. GitHub artifact storage limits must accommodate
-the twelve image archives. No new secrets or host dependencies are required.
+the eighteen image archives. No new secrets or host dependencies are required.
 Checkout, QEMU and artifact actions are pinned by full SHA; the new artifact pins
 and action source were checked against the official upstream repositories.
 Review source before updating pins. All workflow actions use Node 24 runtimes:
@@ -182,7 +200,7 @@ Actions runner v2.327.1 or newer, supplied by the GitHub-hosted Ubuntu runners.
 Each repository gets these tags:
 
 * `php<VERSION>-<full-source-sha>-run<run-id>.<attempt>`: unique release manifest,
-  where VERSION is `8.2.35` or `8.4.27` for the corresponding repository.
+  where VERSION is `8.2.35`, `8.3.37` or `8.4.27` for the corresponding repository.
 * The same release tag plus `-amd64` or `-arm64`: platform staging images.
 * `php<VERSION>` and `latest`: mutable, validated multi-platform compatibility aliases
   within each branch's separate repositories.
@@ -192,7 +210,7 @@ them; disable any immutable-tag rule matching these tags. Never reuse them.
 The run identity distinguishes scheduled package
 refreshes without source changes. UBI can report a later 8.2 patch than the tag's
 minimum (likewise for 8.4); runtime checks and rpm output record what was built.
-All six immutable manifests pass before aliases are promoted. Registries offer no
+All nine release manifests pass before aliases are promoted. Registries offer no
 transaction across repositories: a network failure during promotion can update only some aliases;
 the job fails and a new dispatch safely republishes a complete release.
 
@@ -217,13 +235,13 @@ Platform: linux/amd64
 Platform: linux/arm64/v8
 ```
 
-Consume any of the six images by its published name and tag. Pin a validated
+Consume any of the nine images by its published name and tag. Pin a validated
 immutable release tag or manifest digest for reproducibility; `latest` tracks the
 most recently validated release.
 
 ### Docker Hub descriptions
 
-After successful publication, `scripts/describe.sh` updates all six Docker Hub
+After successful publication, `scripts/describe.sh` updates all nine Docker Hub
 short descriptions and Markdown overviews through the Docker Hub API. Each
 overview includes image features, GitHub source/Dockerfile/documentation links,
 the published release tag, source commit, workflow run, platforms, and a summary
@@ -245,7 +263,7 @@ unverified until a successful publishing workflow executes this step.
 After every successful publication, `scripts/cleanup.sh` keeps the newest two
 complete releases per repository, including their `-amd64` and `-arm64` tags,
 and deletes older complete release families. It follows every API page and
-inventories all six repositories before deleting. `latest`, all `php<VERSION>`
+inventories all nine repositories before deleting. `latest`, all `php<VERSION>`
 aliases and releases referenced by those aliases remain protected. Unrecognized
 tags and incomplete releases are left alone. Fewer than two complete releases,
 API failures, missing latest, and deletion failures fail the job visibly.
@@ -253,7 +271,7 @@ Publication has already completed if cleanup fails; deletion can be partial.
 Older pinned release tags will stop being available after retention removes them.
 
 The existing `DOCKERHUB_TOKEN` must have Read, Write **and Delete** access to the
-six repositories. No additional secret is used. Keep its account/repository scope
+nine repositories. No additional secret is used. Keep its account/repository scope
 as narrow as Docker Hub permits. CI supplies Python 3; the Docker tools image
 includes it for local execution. No new host dependency is required.
 
@@ -274,7 +292,8 @@ Variables → New repository variable** and set `DOCKERHUB_NAMESPACE` to your na
 (for example, `yourname`). This publishes `yourname/php-82-cli`,
 `yourname/s2i-ubi9-php82`, `yourname/php-82-dev`, `yourname/php-84-cli`,
 `yourname/s2i-ubi10-php84` and `yourname/php-84-dev`, including all release and alias
-tags. Create those six Docker Hub repositories and use credentials with push
+tags, plus `yourname/php-83-cli`, `yourname/s2i-ubi10-php83` and
+`yourname/php-83-dev`. Create those nine Docker Hub repositories and use credentials with push
 access to them. In the setup instructions below, replace `paha77` with your chosen
 namespace and use your fork's GitHub repository address for GitHub CLI commands.
 
@@ -290,7 +309,8 @@ affect local build tags or the dev image's freshly built UBI parent.
    `paha77`, or an account with push access to that namespace. Verify the account's
    email address. Create `paha77/php-82-cli`, `paha77/s2i-ubi9-php82` and
    `paha77/php-82-dev`, `paha77/php-84-cli`, `paha77/s2i-ubi10-php84` and
-   `paha77/php-84-dev` on Docker Hub before enabling publication.
+   `paha77/php-84-dev`, `paha77/php-83-cli`, `paha77/s2i-ubi10-php83` and
+   `paha77/php-83-dev` on Docker Hub before enabling publication.
 2. Open your avatar → **Account settings** → **Personal access tokens** →
    **Generate new token**. Give it a dedicated description such as
    `php-docker-images GitHub Actions` and choose an expiration date.
@@ -347,6 +367,15 @@ automatically if secrets are already configured. Watch its result before consumi
 any tag. No application deployment is performed.
 
 ## Implementation validation status
+
+On 26 November 2026, all PHP 8.3 CLI, UBI and dev builds passed the existing
+runtime checks on amd64 and arm64/v8. Both updated UBI 10 bases supplied PHP
+8.3.37 without fallback. Dev used each fresh matching UBI parent and passed
+Xdebug 3.5.3, Composer, FPM, extension, non-root and CLI runner checks. Fallback
+selection/failure tests passed for all three branches, along with shell syntax,
+shared branch configuration and whitespace checks. The PHP 8.3 runtime gate
+also rejected a mismatched 8.4 requirement. CI and publication of PHP 8.3 remain
+unverified; no images were published during these checks.
 
 The version-driven patch passed all four UBI and all four dev builds locally
 on 17 November 2026 (PHP 8.2/8.4, amd64/arm64/v8). Only PHP 8.4 amd64 needed

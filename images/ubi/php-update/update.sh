@@ -17,6 +17,10 @@ case "$minimum" in
         generation=9; include='php-8.2.*,php-*-8.2.*'; packages=('php-8.2.*' 'php-*-8.2.*')
         ubi_repos=(--enablerepo=ubi-9-baseos-rpms --enablerepo=ubi-9-appstream-rpms
             --enablerepo=ubi-9-codeready-builder-rpms) ;;
+    8.3.*)
+        generation=10; include='php-8.3.*,php-*-8.3.*'; packages=('php-8.3.*' 'php-*-8.3.*')
+        ubi_repos=(--enablerepo='ubi-10-for-*-baseos-rpms' --enablerepo='ubi-10-for-*-appstream-rpms'
+            --enablerepo='codeready-builder-for-ubi-10-*-rpms') ;;
     8.4.*)
         generation=10; include='php8.4,php8.4-*'; packages=(php8.4 'php8.4-*')
         ubi_repos=(--enablerepo='ubi-10-for-*-baseos-rpms' --enablerepo='ubi-10-for-*-appstream-rpms'
