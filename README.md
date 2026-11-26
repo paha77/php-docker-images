@@ -172,6 +172,41 @@ publication. Never make the repository public while historical disclosures remai
 
 ## Releases and automation
 
+### Automatic PHP patch review
+
+`php-updates.yml` checks PHP's official JSON release feed daily at 06:41 UTC
+and on manual dispatch. It reads the configured branches from `versions.env`
+and opens a grouped PR changing only newer stable PHP patch pins. It never
+adds branches, downgrades PHP, changes security floors, merges or publishes.
+Failures fetching or validating any branch prevent the entire proposed update.
+The weekly OS-package rebuild remains unchanged.
+
+Enable **Settings → Actions → General → Workflow permissions → Allow GitHub
+Actions to create and approve pull requests**. The checker uses the built-in
+`GITHUB_TOKEN` with contents/PR write permissions; no additional secret is needed.
+See [GitHub's repository settings documentation](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository).
+
+For notifications, select **Watch → Custom → Pull requests** on this repository,
+and enable email delivery in your personal notification settings if desired.
+See [GitHub's notification documentation](https://docs.github.com/en/subscriptions-and-notifications/get-started/configuring-notifications).
+Each proposed version set has a unique branch. Repeated checks reuse it without
+rewriting work or creating duplicate PRs. Closing a PR dismisses that exact set;
+a later version set creates a new PR, which may supersede an older open PR.
+
+Bot-created PR workflows require selecting **Approve workflows to run** in the
+PR before the existing image builds execute; see
+[GitHub's token trigger rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+Review upstream and vendor advisories and both architectures' results before
+merging. Official PHP Docker tags or signed vendor packages can lag upstream;
+keep failed updates open and rerun checks once available. Merging triggers the
+normal default-branch build and publication after validation.
+
+Offline checker tests (Docker tools image):
+
+```sh
+docker run --rm -v "$PWD:/work:ro" -w /work php-image-tools -c 'PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-php-updates.py'
+```
+
 Pull requests and branch pushes build all images without publishing. Default-branch
 pushes, Monday 05:23 UTC schedules, and manual runs on the default branch build,
 validate, then authenticate and publish. PR steps receive no registry credentials;

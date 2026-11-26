@@ -1,0 +1,67 @@
+name: Check PHP patch releases
+on:
+  schedule:
+    - cron: '41 6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: php-patch-updates
+  cancel-in-progress: false
+jobs:
+  updates:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Check configured PHP branches
+        shell: bash
+        run: |
+          set -euo pipefail
+          source versions.env
+          versions=()
+          for branch in "${PHP_BRANCHES[@]}"; do
+            versions+=("$branch=${PHP_VERSIONS[$branch]}")
+          done
+          python3 scripts/check-php-updates.py "${versions[@]}"
+      - name: Open patch review pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- versions.env; then
+            echo 'Configured PHP patches are current.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          digest=$(sha256sum versions.env | cut -d ' ' -f 1)
+          branch="automation/php-patches-$digest"
+          # Content-addressed branches are reused without rewriting existing work.
+          existing=$(gh api "repos/$GH_REPO/branches" --paginate --jq ".[] | select(.name == \"$branch\") | .name")
+          if [[ -z "$existing" ]]; then
+            # Keep the remote SSH-only; use the ephemeral token through the API.
+            parent=$(git rev-parse HEAD)
+            base_tree=$(git rev-parse 'HEAD^{tree}')
+            tree=$(jq -n --arg base "$base_tree" --rawfile content versions.env \
+              '{base_tree: $base, tree: [{path: "versions.env", mode: "100644", type: "blob", content: $content}]}' \
+              | gh api --method POST "repos/$GH_REPO/git/trees" --input - --jq .sha)
+            commit=$(gh api --method POST "repos/$GH_REPO/git/commits" \
+              -f message='Update PHP patch versions' -f tree="$tree" \
+              -f "parents[]=$parent" --jq .sha)
+            gh api --method POST "repos/$GH_REPO/git/refs" \
+              -f "ref=refs/heads/$branch" -f "sha=$commit" >/dev/null
+          fi
+          prs=$(gh pr list --head "$branch" --base "$DEFAULT_BRANCH" --state all --json number --jq length)
+          if [[ "$prs" == 0 ]]; then
+            gh pr create --head "$branch" --base "$DEFAULT_BRANCH" \
+              --title 'Update PHP patch versions' --body-file php-update-body.md
+          fi
+          cat php-update-body.md >> "$GITHUB_STEP_SUMMARY"

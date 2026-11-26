@@ -41,6 +41,16 @@ execute authorized work and necessary checks without repeated confirmation.
 
 ## Build and release architecture
 
+- `.github/workflows/php-updates.yml` checks configured PHP branches daily at
+  06:41 UTC and opens review PRs for stable patch increases in `versions.env`.
+  It uses the built-in GitHub token and content-addressed branches without
+  rewriting existing branches. Repeated checks do not reopen dismissed version
+  sets. Newer sets can supersede older open PRs. It never merges or publishes;
+  reviewers approve bot PR workflows, review vendor changes and merge after
+  validation. Enable Actions PR creation and Watch → Custom → Pull requests
+  for notifications. Run `scripts/test-php-updates.py` in the Docker tools image
+  when changing patch detection. Weekly package rebuilds remain independent.
+
 - After normal updates, all UBI branches check the PHP version requirement.
   Only an outdated version triggers a temporary AlmaLinux PHP patch: EL9 for
   8.2, restricted to `php-8.2.*`/`php-*-8.2.*`; EL10 for 8.3/8.4, restricted to
