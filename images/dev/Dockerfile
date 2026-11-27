@@ -8,7 +8,8 @@ ARG XDEBUG_SOURCE_VERSION
 RUN mkdir /xdebug && \
     if [ -z "$XDEBUG_PACKAGE" ]; then \
         MAKEFLAGS="-j$(nproc)" pecl install "xdebug-${XDEBUG_SOURCE_VERSION}" && \
-        cp "$(php-config --extension-dir)/xdebug.so" /xdebug/xdebug.so; \
+        cp "$(php-config --extension-dir)/xdebug.so" /xdebug/xdebug.so && \
+        strip --strip-debug /xdebug/xdebug.so; \
     fi
 FROM ${COMPOSER_BASE} AS composer
 FROM ${UBI_IMAGE}

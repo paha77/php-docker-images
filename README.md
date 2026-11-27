@@ -149,6 +149,17 @@ UBI and dev restore UID 1001 ownership and owner/group write access to
 `/etc/php.ini`, `/etc/php.d/10-opcache.ini` and `/var/log/php-fpm` after package
 installation. RPM updates can reset these permissions; the S2I runner needs them
 to apply runtime settings, including the unlimited CLI memory limit.
+
+UBI sets `tsflags=nodocs` for package transactions, including security updates,
+the PHP fallback and downstream dev installs. Inherited documentation remains in
+vendor layers; deleting it later would not reclaim those bytes. Locale support
+and the `glibc-common` reinstall are retained. PHP patch scripts and signing keys
+are read-only BuildKit bind mounts and do not enter image layers. Package updates,
+runner configuration and permission restoration share one layer; the three hook
+directories retain their existing copy destinations. Source-built Xdebug has
+debug symbols stripped before copying into dev; exported symbols remain available.
+The CLI build tools and headers remain available for downstream extension builds.
+
 Build-time SSH-key injection is excluded. Status/prelogin hooks are included in
 the UBI image; the metrics script currently assumes cgroup v1. When both
 `PRELOGIN_USER` and `PRELOGIN_PASSWORD` are set, the prelogin hook requires the
@@ -402,6 +413,20 @@ automatically if secrets are already configured. Watch its result before consumi
 any tag. No application deployment is performed.
 
 ## Implementation validation status
+
+On 27 November 2026, the size/layer changes passed all six UBI and all six dev
+builds and existing runtime checks on amd64 and arm64/v8, using fresh matching
+UBI parents. UBI has eight filesystem layers (previously eleven), and dev has
+twelve (previously fifteen). An unchanged PHP 8.3 amd64 baseline built against
+the same vendor digest measured 1,330,414,148 local bytes after execution;
+the optimized build measured 1,330,360,801 bytes, a 53,347-byte reduction.
+No documentation-heavy package update occurred in that comparison, so larger
+documentation savings remain unmeasured. The stripped PHP 8.3 Xdebug binary
+measured 467,424 bytes on amd64 and 523,832 bytes on ARM64; native stack functions
+passed on both architectures for PHP 8.3 and 8.4. Fallback selection/failure
+tests, shell syntax and whitespace checks passed. CLI files were unchanged and
+were not rebuilt. CI execution and publication of these changes remain unverified.
+No images were published. No additional developer setup is required.
 
 On 26 November 2026, all PHP 8.3 CLI, UBI and dev builds passed the existing
 runtime checks on amd64 and arm64/v8. Both updated UBI 10 bases supplied PHP

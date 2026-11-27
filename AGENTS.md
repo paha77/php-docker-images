@@ -171,6 +171,16 @@ never report actual image execution or publication without evidence.
 
 ## Known status and limitations
 
+On 27 November 2026, size/layer optimizations passed all six UBI and all six dev
+builds and runtime checks on amd64 and arm64/v8 with fresh matching parents.
+UBI now has eight filesystem layers and dev twelve. A same-digest PHP 8.3 amd64
+baseline comparison saved 53,347 local bytes in UBI; no documentation-heavy
+update occurred, so larger nodocs savings remain unmeasured. Source-built Xdebug
+is stripped of debug symbols and its native stack function passed for PHP 8.3/8.4
+on both architectures. Fallback tests, shell syntax and whitespace passed.
+CLI is unchanged and was not rebuilt. CI/publication remain unverified; no images
+were published. Keep locale support, security updates and CLI build tools intact.
+
 On 26 November 2026, PHP 8.3 CLI, UBI and dev passed full local builds/runtime
 checks on amd64 and arm64/v8. Both UBI bases supplied 8.3.37 without fallback.
 Dev used fresh matching parents and source-built Xdebug 3.5.3. All three branches
